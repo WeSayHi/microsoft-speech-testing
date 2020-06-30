@@ -1,0 +1,44 @@
+body {
+  display: flex;
+  justify-content: center;
+  background-color: #f5f5f5;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  width: 60vh;
+}
+
+#start-button {
+  background: linear-gradient(90deg, #00ddff, #2900e0);
+  color: white;
+  height: 50px;
+  border-radius: 25px;
+  outline: none;
+  border-width: 0;
+  font-family: Segoe UI;
+  font-weight: 600;
+  margin-top: 50px;
+}
+
+#start-button:hover {
+  background: linear-gradient(90deg, #0099ff, #1c0083);
+}
+
+#start-button:disabled {
+  background: lightgray;
+}
+
+#text-container {
+  margin-top: 50px;
+  padding: 30px;
+  box-shadow: 10px 10px 30px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+}
+
+#output-text {
+  margin-top: 50px;
+  font-family: Segoe UI;
+  font-size: 13px;
+}
