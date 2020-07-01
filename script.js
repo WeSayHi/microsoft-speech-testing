@@ -3,17 +3,27 @@ let startButton = document.getElementById("start-button");
 let output = document.getElementById("output-text");
 let waitingPeriodInput = document.getElementById("waiting-period-input");
 let waitingPeriod = waitingPeriodInput.value;
-let matchPhrasesInput = document.getElementById("match-phrases-input");
-let matchPhrases = matchPhrasesInput.value.split(", ");
+let targetPhraseInput = document.getElementById("target-phrase-input");
 let dropdown = document.getElementById("language-dropdown");
 let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
-let utterances = [];
+let totalLexicals = "";
 
-// Changes the match phrases based on the input
-matchPhrasesInput.addEventListener("change", function () {
-  matchPhrases = matchPhrasesInput.value.split(", ");
+// Splits the target phrase into an array of words
+var targetPhrase = targetPhraseInput.value;
+targetPhrase.replace(".", "");
+targetPhrase.replace(",", "");
+var targetPhraseLowercase = targetPhrase.toLowerCase();
+var targetWords = targetPhraseLowercase.split(" ");
+
+// Changes the target phrases based on the input
+targetPhraseInput.addEventListener("change", function () {
+  targetPhrase = targetPhraseInput.value;
+  targetPhrase.replace(".", "");
+  targetPhrase.replace(",", "");
+  targetPhraseLowercase = targetPhrase.toLowerCase();
+  targetWords = targetPhraseLowercase.split(" ");
 });
 
 // Changes the waiting period based on the input
@@ -51,7 +61,7 @@ startButton.addEventListener("click", () => {
       webAudioRecorder.onComplete = (webAudioRecorder, blob) => {
         // Prepare and upload the file to AWS S3
         blob.name = uuid() + ".ogg";
-        s3upload(blob);
+        // s3upload(blob);
 
         let audioElementSource = window.URL.createObjectURL(blob);
         audioElement.src = audioElementSource;
@@ -83,7 +93,7 @@ startButton.addEventListener("click", () => {
 
   var timeoutID;
 
-  // Called when a new word is picked up and starts a timeout to stop recognition if no words are picked up for a certain time period
+  // Called when a new word is picked up
   reco.recognizing = function (s, e) {
     output.innerText += "Recognizing: " + e.result.text + "\n";
 
@@ -96,72 +106,46 @@ startButton.addEventListener("click", () => {
     if (e.result.text.length > 0) {
       output.innerText += "Recognized Phrase: " + e.result.text + "\n\n";
 
-      // Add each utterance to an array
-      let utterance = JSON.parse(e.result.privJson);
-      utterances.push(utterance);
+      // Add each lexical of NBest to an array
+      for (const item of JSON.parse(e.result.privJson).NBest) {
+        totalLexicals += item.Lexical + " ";
+      }
 
-      // Set timeout to stop recognition if no words are heard
-      timeoutID = setTimeout(() => {
+      // Check how many of the target words are in the total lexicals
+      var matchedWordsCount = 0;
+      for (const word of targetWords) {
+        console.log(totalLexicals);
+        console.log(word);
+        if (totalLexicals.indexOf(word) != -1) {
+          matchedWordsCount += 1;
+        }
+      }
+
+      // End recognition if all target words are found
+      if (matchedWordsCount == targetWords.length) {
         reco.stopContinuousRecognitionAsync();
-      }, waitingPeriod);
+        output.innerText += "Done. Target successfully matched";
+      } else {
+        // Set timeout to stop recognition if no words are heard
+        timeoutID = setTimeout(() => {
+          reco.stopContinuousRecognitionAsync();
+          output.innerText +=
+            "Done. No speech heard in the last " + waitingPeriod + "ms\n";
+        }, waitingPeriod);
+      }
     }
   };
 
   // Called when recognition has stopped
   reco.sessionStopped = function (s, e) {
-    // Output that recognition is done
-    output.innerText +=
-      "Done. No speech heard in the last " + waitingPeriod + "ms\n";
-
     // Stop the recording
     webAudioRecorder.finishRecording();
-
-    // Loop through each phrase to be matched
-    var finalConfidences = [];
-    for (var i = 0; i < matchPhrases.length; i++) {
-      var matchesConfidences = [];
-
-      // Loop through the NBest array of each utterance
-      for (const utterance of utterances) {
-        for (const prediction of utterance.NBest) {
-          // Check if it contains the phrase to be matched. If so, append the confidence of that match to an array
-          if (prediction.Lexical.indexOf(matchPhrases[i].toLowerCase()) != -1) {
-            matchesConfidences.push(prediction.Confidence);
-          }
-        }
-      }
-
-      // Get the maximum confidence from all the matches for this specific phrase
-      var maxConfidence = 0;
-      if (matchesConfidences.length > 0) {
-        maxConfidence = Math.max(...matchesConfidences);
-      }
-
-      // This finalConfidences array has the cooresponding max confidences for each phrase entered
-      finalConfidences.push(maxConfidence);
-    }
-
-    // Clear the utterances array to be used next recording
-    utterances = [];
-
-    // Output the final confidences and average confidence
-    output.innerText +=
-      "Final confidences (cooresponding to the phrases): " +
-      finalConfidences +
-      "\n";
-
-    var sum = 0;
-    for (const confidence of finalConfidences) {
-      sum += confidence;
-    }
-    averageConfidence = sum / finalConfidences.length;
-    output.innerText += "Final average confidence: " + averageConfidence;
 
     // Re-enable the start button
     startButton.disabled = false;
   };
 
-  // Starts recognition
+  // Start recognition
   reco.startContinuousRecognitionAsync();
   output.innerText = "Recognition started\n\n";
   startButton.disabled = true;
@@ -198,8 +182,6 @@ function s3upload(file) {
   if (file) {
     var fileName = file.name;
     var filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
-    var fileUrl =
-      "https://" + bucketRegion + ".amazonaws.com/my-first-bucket/" + filePath;
 
     s3.upload(
       {
