@@ -9,7 +9,6 @@ let dropdown = document.getElementById("language-dropdown");
 let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
-let currentlyRecording = false;
 let utterances = [];
 
 // Changes the match phrases based on the input
@@ -33,7 +32,6 @@ startButton.addEventListener("click", () => {
   navigator.mediaDevices
     .getUserMedia({ audio: true, video: false })
     .then((stream) => {
-      currentlyRecording = true;
       getUserMediaStream = stream;
       let AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioContext = new AudioContext();
@@ -49,7 +47,12 @@ startButton.addEventListener("click", () => {
         },
       });
 
+      // Called when the recording has finished
       webAudioRecorder.onComplete = (webAudioRecorder, blob) => {
+        // Prepare and upload the file to AWS S3
+        blob.name = uuid() + ".ogg";
+        s3upload(blob);
+
         let audioElementSource = window.URL.createObjectURL(blob);
         audioElement.src = audioElementSource;
         audioElement.controls = true;
@@ -83,6 +86,8 @@ startButton.addEventListener("click", () => {
   // Called when a new word is picked up and starts a timeout to stop recognition if no words are picked up for a certain time period
   reco.recognizing = function (s, e) {
     output.innerText += "Recognizing: " + e.result.text + "\n";
+
+    // Clear the cancel timeout if words are heard
     clearTimeout(timeoutID);
   };
 
@@ -95,6 +100,7 @@ startButton.addEventListener("click", () => {
       let utterance = JSON.parse(e.result.privJson);
       utterances.push(utterance);
 
+      // Set timeout to stop recognition if no words are heard
       timeoutID = setTimeout(() => {
         reco.stopContinuousRecognitionAsync();
       }, waitingPeriod);
@@ -103,8 +109,12 @@ startButton.addEventListener("click", () => {
 
   // Called when recognition has stopped
   reco.sessionStopped = function (s, e) {
+    // Output that recognition is done
     output.innerText +=
       "Done. No speech heard in the last " + waitingPeriod + "ms\n";
+
+    // Stop the recording
+    webAudioRecorder.finishRecording();
 
     // Loop through each phrase to be matched
     var finalConfidences = [];
@@ -134,11 +144,21 @@ startButton.addEventListener("click", () => {
     // Clear the utterances array to be used next recording
     utterances = [];
 
+    // Output the final confidences and average confidence
     output.innerText +=
-      "Final confidences (cooresponding to the phrases): " + finalConfidences;
+      "Final confidences (cooresponding to the phrases): " +
+      finalConfidences +
+      "\n";
 
+    var sum = 0;
+    for (const confidence of finalConfidences) {
+      sum += confidence;
+    }
+    averageConfidence = sum / finalConfidences.length;
+    output.innerText += "Final average confidence: " + averageConfidence;
+
+    // Re-enable the start button
     startButton.disabled = false;
-    webAudioRecorder.finishRecording();
   };
 
   // Starts recognition
@@ -146,3 +166,53 @@ startButton.addEventListener("click", () => {
   output.innerText = "Recognition started\n\n";
   startButton.disabled = true;
 });
+
+// UUID for file naming
+function uuid() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = (Math.random() * 16) | 0,
+      v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// Initialize AWS configuration
+var bucketName = "nfscratch";
+var bucketRegion = "us-east-1";
+var IdentityPoolId = "us-east-1:3efbe2a5-c38f-433a-8720-37b7b5f61a7d";
+
+AWS.config.update({
+  region: bucketRegion,
+  credentials: new AWS.CognitoIdentityCredentials({
+    IdentityPoolId: IdentityPoolId,
+  }),
+});
+
+var s3 = new AWS.S3({
+  apiVersion: "2006-03-01",
+  params: { Bucket: bucketName },
+});
+
+// Upload to S3
+function s3upload(file) {
+  if (file) {
+    var fileName = file.name;
+    var filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
+    var fileUrl =
+      "https://" + bucketRegion + ".amazonaws.com/my-first-bucket/" + filePath;
+
+    s3.upload(
+      {
+        Key: filePath,
+        Body: file,
+        ACL: "public-read",
+      },
+      function (err, data) {
+        if (err) {
+          reject("error");
+        }
+        console.log("Successfully Uploaded!");
+      }
+    );
+  }
+}
