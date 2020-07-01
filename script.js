@@ -9,21 +9,19 @@ let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 let totalLexicals = "";
+let targetWords = formatTarget(targetPhraseInput.value);
 
-// Splits the target phrase into an array of words
-var targetPhrase = targetPhraseInput.value;
-targetPhrase.replace(".", "");
-targetPhrase.replace(",", "");
-var targetPhraseLowercase = targetPhrase.toLowerCase();
-var targetWords = targetPhraseLowercase.split(" ");
+// Formats the target phrase and splits it into an array of words
+function formatTarget(target) {
+  return target
+    .toLowerCase()
+    .replace(/[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g, "")
+    .split(" ");
+}
 
 // Changes the target phrases based on the input
 targetPhraseInput.addEventListener("change", function () {
-  targetPhrase = targetPhraseInput.value;
-  targetPhrase.replace(".", "");
-  targetPhrase.replace(",", "");
-  targetPhraseLowercase = targetPhrase.toLowerCase();
-  targetWords = targetPhraseLowercase.split(" ");
+  targetWords = formatTarget(targetPhraseInput.value);
 });
 
 // Changes the waiting period based on the input
@@ -114,8 +112,6 @@ startButton.addEventListener("click", () => {
       // Check how many of the target words are in the total lexicals
       var matchedWordsCount = 0;
       for (const word of targetWords) {
-        console.log(totalLexicals);
-        console.log(word);
         if (totalLexicals.indexOf(word) != -1) {
           matchedWordsCount += 1;
         }
@@ -133,6 +129,9 @@ startButton.addEventListener("click", () => {
             "Done. No speech heard in the last " + waitingPeriod + "ms\n";
         }, waitingPeriod);
       }
+
+      // Clear the lexicals for next recognition
+      totalLexicals = "";
     }
   };
 
