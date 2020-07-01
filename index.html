@@ -8,10 +8,20 @@
   </head>
   <body>
     <div id="container">
-      <button id="start-button" onClick="startRecognition()">
+      <button id="start-button">
         Click to start recognition
       </button>
-      <select id="microphoneSource" style="display: none;"> </select>
+      <label class="label">Launguage</label>
+      <select name="Language" id="language-dropdown">
+        <option value="fr-FR">French</option>
+        <option value="it-IT">Italian</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="en-US">English (US)</option>
+        <option value="ru-RU">Russian</option>
+      </select>
+      <label class="label">Waiting Period (in milliseconds)</label>
+      <input type="number" id="waiting-period-input" value="5000" />
+      <audio controls id="audio"></audio>
       <div id="text-container">
         <span id="output-text"> Recognition not started yet</span>
       </div>
@@ -21,76 +31,9 @@
   <!-- SDK Reference -->
   <script src="./node_modules/microsoft-cognitiveservices-speech-sdk/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle.js"></script>
 
-  <script>
-    function startRecognition() {
-      // Set the waiting period (in ms)
-      const waitingPeriod = 5000;
+  <!-- WebAudioRecorder Reference -->
+  <script src="web_audio_recorder_js/WebAudioRecorder.js"></script>
 
-      // Initialize javascript instances of the page components
-      const startButton = document.getElementById("start-button");
-      const output = document.getElementById("output-text");
-
-      // Set up audio context
-      var soundContext;
-      try {
-        var AudioContext =
-          window.AudioContext || // our preferred impl
-          window.webkitAudioContext || // fallback, mostly when on Safari
-          false; // could not find.
-
-        if (AudioContext) {
-          soundContext = new AudioContext();
-        } else {
-          alert("Audio context not supported");
-        }
-      } catch (e) {
-        window.console.log("no sound context found, no audio output. " + e);
-      }
-
-      // Set up the audio config from the microphone
-      microphoneSource = document.getElementById("microphoneSource");
-
-      if (undefined != microphoneSource.value) {
-        audioConfig = SpeechSDK.AudioConfig.fromMicrophoneInput(
-          microphoneSource.value
-        );
-      } else {
-        audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-      }
-
-      // Set up the speech config from the API key and region then set the language to French
-      var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-        "6b19ea6cfaa74e538bdd433daf387108",
-        "centralindia"
-      );
-      speechConfig.speechRecognitionLanguage = "fr-CA";
-      var reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-
-      // Setting up callback functions before starting recognition
-
-      // Called when a new word is picked up and starts a timeout to stop recognition if no words are picked up for a certain time period
-      var timeoutID;
-      reco.recognizing = function (s, e) {
-        output.innerText += "Recognizing: " + e.result.text + "\n";
-        clearTimeout(timeoutID);
-        timeoutID = setTimeout(() => {
-          reco.stopContinuousRecognitionAsync();
-          output.innerText += "Done. No speech heard in the last 5000ms";
-          startButton.disabled = false;
-        }, waitingPeriod);
-      };
-
-      // Called when one phrase is finished
-      reco.recognized = function (s, e) {
-        if (e.result.text.length > 0) {
-          output.innerText += "Recognized Phrase: " + e.result.text + "\n\n";
-        }
-      };
-
-      // Starts recognition
-      reco.startContinuousRecognitionAsync();
-      output.innerText = "Recognition started\n\n";
-      startButton.disabled = true;
-    }
-  </script>
+  <!-- Script Reference -->
+  <script src="script.js"></script>
 </html>
