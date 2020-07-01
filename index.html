@@ -11,6 +11,11 @@
       <button id="start-button">
         Click to start recognition
       </button>
+      <label class="label"
+        >Phrases to match (you can enter multiple comma and space seperated...
+        ", ")</label
+      >
+      <input id="match-phrases-input" value="Je suis" />
       <label class="label">Launguage</label>
       <select name="Language" id="language-dropdown">
         <option value="fr-FR">French</option>
@@ -20,10 +25,10 @@
         <option value="ru-RU">Russian</option>
       </select>
       <label class="label">Waiting Period (in milliseconds)</label>
-      <input type="number" id="waiting-period-input" value="5000" />
+      <input type="number" id="waiting-period-input" value="1000" />
       <audio controls id="audio"></audio>
       <div id="text-container">
-        <span id="output-text"> Recognition not started yet</span>
+        <span id="output-text"> Recognition not yet started</span>
       </div>
     </div>
   </body>
@@ -34,6 +39,9 @@
   <!-- WebAudioRecorder Reference -->
   <script src="web_audio_recorder_js/WebAudioRecorder.js"></script>
 
-  <!-- Script Reference -->
-  <script src="script.js"></script>
+  <!-- Audio Script Reference -->
+  <script src="audio-script.js"></script>
+
+  <!-- AWS Upload Script Reference -->
+  <script src="aws-script.js"></script>
 </html>

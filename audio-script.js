@@ -3,11 +3,19 @@ let startButton = document.getElementById("start-button");
 let output = document.getElementById("output-text");
 let waitingPeriodInput = document.getElementById("waiting-period-input");
 let waitingPeriod = waitingPeriodInput.value;
+let matchPhrasesInput = document.getElementById("match-phrases-input");
+let matchPhrases = matchPhrasesInput.value.split(", ");
 let dropdown = document.getElementById("language-dropdown");
 let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 let currentlyRecording = false;
+let utterances = [];
+
+// Changes the match phrases based on the input
+matchPhrasesInput.addEventListener("change", function () {
+  matchPhrases = matchPhrasesInput.value.split(", ");
+});
 
 // Changes the waiting period based on the input
 waitingPeriodInput.addEventListener("change", function () {
@@ -21,6 +29,7 @@ dropdown.addEventListener("change", function () {
 
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
+  // Record the sound on a sepereate stream ndoe
   navigator.mediaDevices
     .getUserMedia({ audio: true, video: false })
     .then((stream) => {
@@ -32,10 +41,11 @@ startButton.addEventListener("click", () => {
 
       webAudioRecorder = new WebAudioRecorder(source, {
         workerDir: "web_audio_recorder_js/",
-        encoding: "mp3",
+        numChannels: 1,
+        encoding: "ogg",
         options: {
           encodeAfterRecord: true,
-          mp3: { bitRate: "320" },
+          ogg: { quality: 0.5 },
         },
       });
 
@@ -63,32 +73,70 @@ startButton.addEventListener("click", () => {
     "centralindia"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
+  speechConfig.outputFormat = 1;
   var reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
   // Setting up callback functions before starting recognition
 
-  // Called when a new word is picked up and starts a timeout to stop recognition if no words are picked up for a certain time period
   var timeoutID;
+
+  // Called when a new word is picked up and starts a timeout to stop recognition if no words are picked up for a certain time period
   reco.recognizing = function (s, e) {
     output.innerText += "Recognizing: " + e.result.text + "\n";
     clearTimeout(timeoutID);
-    timeoutID = setTimeout(() => {
-      reco.stopContinuousRecognitionAsync();
-    }, waitingPeriod);
   };
 
   // Called when one phrase is finished
   reco.recognized = function (s, e) {
     if (e.result.text.length > 0) {
       output.innerText += "Recognized Phrase: " + e.result.text + "\n\n";
-      console.log(e);
+
+      // Add each utterance to an array
+      let utterance = JSON.parse(e.result.privJson);
+      utterances.push(utterance);
+
+      timeoutID = setTimeout(() => {
+        reco.stopContinuousRecognitionAsync();
+      }, waitingPeriod);
     }
   };
 
   // Called when recognition has stopped
   reco.sessionStopped = function (s, e) {
     output.innerText +=
-      "Done. No speech heard in the last " + waitingPeriod + "ms";
+      "Done. No speech heard in the last " + waitingPeriod + "ms\n";
+
+    // Loop through each phrase to be matched
+    var finalConfidences = [];
+    for (var i = 0; i < matchPhrases.length; i++) {
+      var matchesConfidences = [];
+
+      // Loop through the NBest array of each utterance
+      for (const utterance of utterances) {
+        for (const prediction of utterance.NBest) {
+          // Check if it contains the phrase to be matched. If so, append the confidence of that match to an array
+          if (prediction.Lexical.indexOf(matchPhrases[i].toLowerCase()) != -1) {
+            matchesConfidences.push(prediction.Confidence);
+          }
+        }
+      }
+
+      // Get the maximum confidence from all the matches for this specific phrase
+      var maxConfidence = 0;
+      if (matchesConfidences.length > 0) {
+        maxConfidence = Math.max(...matchesConfidences);
+      }
+
+      // This finalConfidences array has the cooresponding max confidences for each phrase entered
+      finalConfidences.push(maxConfidence);
+    }
+
+    // Clear the utterances array to be used next recording
+    utterances = [];
+
+    output.innerText +=
+      "Final confidences (cooresponding to the phrases): " + finalConfidences;
+
     startButton.disabled = false;
     webAudioRecorder.finishRecording();
   };
