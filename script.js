@@ -8,15 +8,12 @@ let dropdown = document.getElementById("language-dropdown");
 let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
-let totalLexicals = "";
+let totalITN = "";
 let targetWords = formatTarget(targetPhraseInput.value);
 
 // Formats the target phrase and splits it into an array of words
 function formatTarget(target) {
-  return target
-    .toLowerCase()
-    .replace(/[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g, "")
-    .split(" ");
+  return target.toLowerCase().split(" ");
 }
 
 // Changes the target phrases based on the input
@@ -61,23 +58,34 @@ startButton.addEventListener("click", () => {
     if (e.result.text.length > 0) {
       output.innerText += "Recognized Phrase: " + e.result.text + "\n";
 
-      // Add each lexical of NBest to an array
+      // Add each ITN of NBest to a string
       for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalLexicals += item.Lexical + " ";
+        totalITN += item.ITN + " ";
       }
 
-      output.innerText += "Total Lexicals: " + totalLexicals + "\n\n";
+      output.innerText += "Total ITN: " + totalITN + "\n\n";
 
-      // Check how many of the target words are in the total lexicals
-      var matchedWordsCount = 0;
+      // Check if the total ITN contains any unmatched words
+      var matchedWords = [];
       for (const word of targetWords) {
-        if (totalLexicals.indexOf(word) != -1) {
-          matchedWordsCount += 1;
+        if (totalITN.indexOf(word) != -1) {
+          matchedWords.push(word);
         }
       }
 
+      // Remove any matched words from the target array
+      for (word of matchedWords) {
+        targetWords.splice(targetWords.indexOf(word), 1);
+      }
+
+      // Clear the total ITN to save resources
+      totalITN = "";
+
       // End recognition if all target words are found
-      if (matchedWordsCount == targetWords.length) {
+      if (targetWords.length == 0) {
+        // Reset the target words because they have all been removed
+        targetWords = formatTarget(targetPhraseInput.value);
+
         reco.stopContinuousRecognitionAsync();
         output.innerText += "Done. Target successfully matched";
       } else {
@@ -95,9 +103,6 @@ startButton.addEventListener("click", () => {
   reco.sessionStopped = function (s, e) {
     webAudioRecorder.finishRecording();
     startButton.disabled = false;
-
-    // Clear the lexicals for next recognition
-    totalLexicals = "";
   };
 
   // Start recognition
@@ -130,9 +135,8 @@ startButton.addEventListener("click", () => {
       // Called when the recording has finished
       webAudioRecorder.onComplete = (webAudioRecorder, blob) => {
         // Prepare and upload the file to AWS S3
-        blob.name =
-          targetPhraseInput.value + " " + new Date().getTime() + ".ogg";
-        s3upload(blob);
+        blob.name = uuid() + ".ogg";
+        // s3upload(blob);
 
         let audioElementSource = window.URL.createObjectURL(blob);
         audioElement.src = audioElementSource;
@@ -149,6 +153,15 @@ startButton.addEventListener("click", () => {
       console.error(err);
     });
 });
+
+// Generate UUID
+function uuid() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = (Math.random() * 16) | 0,
+      v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Initialize AWS configuration
 var bucketName = "nfscratch";
