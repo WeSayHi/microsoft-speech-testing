@@ -10,7 +10,7 @@ let webAudioRecorder;
 let totalITN = "";
 let match = null;
 
-let targetArrays = [["I am a mom"], ["I am mom"]];
+let targetArrays = [["i want to speak english"], ["I want speak english"]];
 
 // Formats the target phrase and splits it into an array of words
 function formatTarget(target) {
@@ -67,7 +67,7 @@ startButton.addEventListener("click", () => {
     if (e.result.text.length > 0) {
       // Add each ITN of NBest to a string
       for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalITN += item.ITN + " ";
+        totalITN = " " + item.ITN + " ";
         output.innerText += "Recognized ITN: " + item.ITN + "\n";
       }
 
