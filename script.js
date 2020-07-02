@@ -10,7 +10,7 @@ let webAudioRecorder;
 let totalITN = "";
 let match = null;
 
-let targetArrays = [["i want to speak english"], ["I want speak english"]];
+let targetArrays = [["i want to speak english"], ["i want speak english"]];
 
 // Formats the target phrase and splits it into an array of words
 function formatTarget(target) {
@@ -67,7 +67,7 @@ startButton.addEventListener("click", () => {
     if (e.result.text.length > 0) {
       // Add each ITN of NBest to a string
       for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalITN = " " + item.ITN + " ";
+        totalITN += " " + item.ITN + " ";
         output.innerText += "Recognized ITN: " + item.ITN + "\n";
       }
 
@@ -78,12 +78,14 @@ startButton.addEventListener("click", () => {
           // Make an array of each word in the phrase
           const targetPhrase = targetArrays[a][i];
           var targetWords = formatTarget(targetPhrase);
-          console.log(targetWords);
 
           // Check if the total ITN contains any unmatched words
           var matchedWords = [];
           for (const word of targetWords) {
-            if (totalITN.indexOf(word) != -1) {
+            console.log(word);
+            console.log(totalITN);
+            if (totalITN.includes(word)) {
+              console.log(word + " matches");
               matchedWords.push(word);
             }
           }
@@ -92,6 +94,9 @@ startButton.addEventListener("click", () => {
           for (const word of matchedWords) {
             targetWords.splice(targetWords.indexOf(word), 1);
           }
+
+          console.log("match", matchedWords);
+          console.log("target", targetWords);
 
           // End recognition if all target words are found
           if (targetWords.length == 0) {
@@ -102,7 +107,9 @@ startButton.addEventListener("click", () => {
                 index: i,
                 word: targetPhrase,
               };
+              console.log("Match!");
             }
+            console.log("Already matched");
 
             recognizer.stopContinuousRecognitionAsync();
           }
