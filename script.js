@@ -121,6 +121,7 @@ startButton.addEventListener("click", () => {
         numChannels: 1,
         encoding: "ogg",
         options: {
+          timeLimit: 60,
           encodeAfterRecord: true,
           ogg: { quality: 0.5 },
         },
@@ -129,8 +130,9 @@ startButton.addEventListener("click", () => {
       // Called when the recording has finished
       webAudioRecorder.onComplete = (webAudioRecorder, blob) => {
         // Prepare and upload the file to AWS S3
-        blob.name = uuid() + ".ogg";
-        // s3upload(blob);
+        blob.name =
+          targetPhraseInput.value + " " + new Date().getTime() + ".ogg";
+        s3upload(blob);
 
         let audioElementSource = window.URL.createObjectURL(blob);
         audioElement.src = audioElementSource;
@@ -147,15 +149,6 @@ startButton.addEventListener("click", () => {
       console.error(err);
     });
 });
-
-// UUID for file naming
-function uuid() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    var r = (Math.random() * 16) | 0,
-      v = c == "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 // Initialize AWS configuration
 var bucketName = "nfscratch";
