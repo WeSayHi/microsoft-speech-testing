@@ -7,8 +7,6 @@ let dropdown = document.getElementById("language-dropdown");
 let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
-let totalITN = "";
-let match = null;
 
 let targetArrays = [["i want to speak english"], ["i want speak english"]];
 
@@ -32,6 +30,11 @@ dropdown.addEventListener("change", function () {
 
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
+  // Initialize variables local to each recognition session
+  var matchedWords = [];
+  let totalITN = "";
+  let match = null;
+
   // Set up the SpeechSDK config
   audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
@@ -80,13 +83,14 @@ startButton.addEventListener("click", () => {
           var targetWords = formatTarget(targetPhrase);
 
           // Check if the total ITN contains any unmatched words
-          var matchedWords = [];
           for (const word of targetWords) {
             console.log(word);
             console.log(totalITN);
             if (totalITN.includes(word)) {
               console.log(word + " matches");
-              matchedWords.push(word);
+              if (!matchedWords.includes(word)) {
+                matchedWords.push(word);
+              }
             }
           }
 
@@ -141,9 +145,9 @@ startButton.addEventListener("click", () => {
         "\nMatch found! " +
         "Array index: " +
         match.arrayIndex +
-        ", Word index: " +
+        ", Phrase index: " +
         match.index +
-        ", Word: " +
+        ", Phrase: " +
         match.word +
         "\n";
     }
@@ -153,7 +157,6 @@ startButton.addEventListener("click", () => {
   recognizer.startContinuousRecognitionAsync();
   output.innerText =
     "Recognition started\nTarget words: " + targetArrays + "\n\n";
-  match = null;
   startButton.disabled = true;
   audioElement.controls = false;
 
