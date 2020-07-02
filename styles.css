@@ -39,11 +39,6 @@ body {
   font-size: 13px;
 }
 
-#target-phrase-input {
-  height: 25px;
-  padding-left: 5px;
-}
-
 #language-dropdown {
   height: 30px;
   padding-left: 5px;

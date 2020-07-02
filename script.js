@@ -3,23 +3,22 @@ let startButton = document.getElementById("start-button");
 let output = document.getElementById("output-text");
 let waitingPeriodInput = document.getElementById("waiting-period-input");
 let waitingPeriod = waitingPeriodInput.value;
-let targetPhraseInput = document.getElementById("target-phrase-input");
 let dropdown = document.getElementById("language-dropdown");
 let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 let totalITN = "";
-let targetWords = formatTarget(targetPhraseInput.value);
+let match = null;
+
+let targetArrays = [
+  ["je suis de", "je suis dan", "je suis dans", "je suis day"],
+  ["je suis", "je sui", "je suis la", "je suit", "j'en", "ja suis"],
+];
 
 // Formats the target phrase and splits it into an array of words
 function formatTarget(target) {
   return target.toLowerCase().split(" ");
 }
-
-// Changes the target phrases based on the input
-targetPhraseInput.addEventListener("change", function () {
-  targetWords = formatTarget(targetPhraseInput.value);
-});
 
 // Changes the waiting period based on the input
 waitingPeriodInput.addEventListener("change", function () {
@@ -41,74 +40,112 @@ startButton.addEventListener("click", () => {
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
-  var reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+  var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+  // Add words to phrase list so they are more easily recognized
+  var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
+    recognizer
+  );
+  for (const targetArray of targetArrays) {
+    for (const targetPhrase of targetArray) {
+      phraseListGrammar.addPhrase(targetPhrase);
+    }
+  }
 
   // Setting up callback functions before starting recognition
 
   var timeoutID;
 
   // Called when a new word is picked up
-  reco.recognizing = function (s, e) {
+  recognizer.recognizing = function (s, e) {
     // Clear the cancel timeout if words are heard
     clearTimeout(timeoutID);
   };
 
   // Called when one phrase is finished
-  reco.recognized = function (s, e) {
+  recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
-      output.innerText += "Recognized Phrase: " + e.result.text + "\n";
-
       // Add each ITN of NBest to a string
       for (const item of JSON.parse(e.result.privJson).NBest) {
         totalITN += item.ITN + " ";
+        output.innerText += "Recognized ITN: " + item.ITN + "\n";
       }
 
-      output.innerText += "Total ITN: " + totalITN + "\n\n";
+      // Loop through the array of target arrays
+      for (a = 0; a < targetArrays.length; a++) {
+        // Loop through the array of target phrases
+        for (i = 0; i < targetArrays[a].length; i++) {
+          // Make an array of each word in the phrase
+          const targetPhrase = targetArrays[a][i];
+          var targetWords = formatTarget(targetPhrase);
 
-      // Check if the total ITN contains any unmatched words
-      var matchedWords = [];
-      for (const word of targetWords) {
-        if (totalITN.indexOf(word) != -1) {
-          matchedWords.push(word);
+          // Check if the total ITN contains any unmatched words
+          var matchedWords = [];
+          for (const word of targetWords) {
+            if (totalITN.indexOf(word) != -1) {
+              matchedWords.push(word);
+            }
+          }
+
+          // Remove any matched words from the target array
+          for (const word of matchedWords) {
+            targetWords.splice(targetWords.indexOf(word), 1);
+          }
+
+          // End recognition if all target words are found
+          if (targetWords.length == 0) {
+            // If there are no matches yet, set the match
+            if (!match) {
+              match = {
+                arrayIndex: a,
+                index: i,
+                word: targetPhrase,
+              };
+            }
+
+            recognizer.stopContinuousRecognitionAsync();
+          }
         }
       }
+    }
 
-      // Remove any matched words from the target array
-      for (word of matchedWords) {
-        targetWords.splice(targetWords.indexOf(word), 1);
-      }
+    // Clear total ITN
+    totalITN = "";
 
-      // Clear the total ITN to save resources
-      totalITN = "";
-
-      // End recognition if all target words are found
-      if (targetWords.length == 0) {
-        // Reset the target words because they have all been removed
-        targetWords = formatTarget(targetPhraseInput.value);
-
-        reco.stopContinuousRecognitionAsync();
-        output.innerText += "Done. Target successfully matched";
-      } else {
-        // Set timeout to stop recognition if no words are heard
-        timeoutID = setTimeout(() => {
-          reco.stopContinuousRecognitionAsync();
-          output.innerText +=
-            "Done. No speech heard in the last " + waitingPeriod + "ms\n";
-        }, waitingPeriod);
-      }
+    // Set timeout to stop recognition if no words are heard
+    if (!match) {
+      timeoutID = setTimeout(() => {
+        recognizer.stopContinuousRecognitionAsync();
+        output.innerText +=
+          "\nDone. Didn't recognize speech for " + waitingPeriod + "ms\n";
+      }, waitingPeriod);
     }
   };
 
   // Called when recognition has stopped
-  reco.sessionStopped = function (s, e) {
+  recognizer.sessionStopped = function (s, e) {
     webAudioRecorder.finishRecording();
     startButton.disabled = false;
+    recognizer.close();
+    phraseListGrammar.clear();
+    if (match) {
+      output.innerText +=
+        "\nMatch found! " +
+        "Array index: " +
+        match.arrayIndex +
+        ", Word index: " +
+        match.index +
+        ", Word: " +
+        match.word +
+        "\n";
+    }
   };
 
   // Start recognition
-  reco.startContinuousRecognitionAsync();
+  recognizer.startContinuousRecognitionAsync();
   output.innerText =
-    "Recognition started\nTarget words: " + targetWords + "\n\n";
+    "Recognition started\nTarget words: " + targetArrays + "\n\n";
+  match = null;
   startButton.disabled = true;
   audioElement.controls = false;
 
