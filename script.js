@@ -10,14 +10,14 @@ let webAudioRecorder;
 let totalITN = "";
 let match = null;
 
-let targetArrays = [
-  ["je suis de", "je suis dan", "je suis dans", "je suis day"],
-  ["je suis", "je sui", "je suis la", "je suit", "j'en", "ja suis"],
-];
+let targetArrays = [["I am a mom"], ["I am mom"]];
 
 // Formats the target phrase and splits it into an array of words
 function formatTarget(target) {
-  return target.toLowerCase().split(" ");
+  return target
+    .toLowerCase()
+    .split(" ")
+    .map((item) => (item = " " + item + " "));
 }
 
 // Changes the waiting period based on the input
@@ -42,15 +42,15 @@ startButton.addEventListener("click", () => {
   speechConfig.outputFormat = 1;
   var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
-  // Add words to phrase list so they are more easily recognized
-  var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
-    recognizer
-  );
-  for (const targetArray of targetArrays) {
-    for (const targetPhrase of targetArray) {
-      phraseListGrammar.addPhrase(targetPhrase);
-    }
-  }
+  // // Add words to phrase list so they are more easily recognized
+  // var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
+  //   recognizer
+  // );
+  // for (const targetArray of targetArrays) {
+  //   for (const targetPhrase of targetArray) {
+  //     phraseListGrammar.addPhrase(targetPhrase);
+  //   }
+  // }
 
   // Setting up callback functions before starting recognition
 
@@ -78,6 +78,7 @@ startButton.addEventListener("click", () => {
           // Make an array of each word in the phrase
           const targetPhrase = targetArrays[a][i];
           var targetWords = formatTarget(targetPhrase);
+          console.log(targetWords);
 
           // Check if the total ITN contains any unmatched words
           var matchedWords = [];
@@ -127,7 +128,7 @@ startButton.addEventListener("click", () => {
     webAudioRecorder.finishRecording();
     startButton.disabled = false;
     recognizer.close();
-    phraseListGrammar.clear();
+    // phraseListGrammar.clear();
     if (match) {
       output.innerText +=
         "\nMatch found! " +
