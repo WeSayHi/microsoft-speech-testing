@@ -36,6 +36,77 @@ dropdown.addEventListener("change", function () {
 
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
+  // Set up the SpeechSDK config
+  audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+    "6b19ea6cfaa74e538bdd433daf387108",
+    "centralindia"
+  );
+  speechConfig.speechRecognitionLanguage = languageCode;
+  speechConfig.outputFormat = 1;
+  var reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+  // Setting up callback functions before starting recognition
+
+  var timeoutID;
+
+  // Called when a new word is picked up
+  reco.recognizing = function (s, e) {
+    // Clear the cancel timeout if words are heard
+    clearTimeout(timeoutID);
+  };
+
+  // Called when one phrase is finished
+  reco.recognized = function (s, e) {
+    if (e.result.text.length > 0) {
+      output.innerText += "Recognized Phrase: " + e.result.text + "\n";
+
+      // Add each lexical of NBest to an array
+      for (const item of JSON.parse(e.result.privJson).NBest) {
+        totalLexicals += item.Lexical + " ";
+      }
+
+      output.innerText += "Total Lexicals: " + totalLexicals + "\n\n";
+
+      // Check how many of the target words are in the total lexicals
+      var matchedWordsCount = 0;
+      for (const word of targetWords) {
+        if (totalLexicals.indexOf(word) != -1) {
+          matchedWordsCount += 1;
+        }
+      }
+
+      // End recognition if all target words are found
+      if (matchedWordsCount == targetWords.length) {
+        reco.stopContinuousRecognitionAsync();
+        output.innerText += "Done. Target successfully matched";
+      } else {
+        // Set timeout to stop recognition if no words are heard
+        timeoutID = setTimeout(() => {
+          reco.stopContinuousRecognitionAsync();
+          output.innerText +=
+            "Done. No speech heard in the last " + waitingPeriod + "ms\n";
+        }, waitingPeriod);
+      }
+    }
+  };
+
+  // Called when recognition has stopped
+  reco.sessionStopped = function (s, e) {
+    webAudioRecorder.finishRecording();
+    startButton.disabled = false;
+
+    // Clear the lexicals for next recognition
+    totalLexicals = "";
+  };
+
+  // Start recognition
+  reco.startContinuousRecognitionAsync();
+  output.innerText =
+    "Recognition started\nTarget words: " + targetWords + "\n\n";
+  startButton.disabled = true;
+  audioElement.controls = false;
+
   // Record the sound on a sepereate stream ndoe
   navigator.mediaDevices
     .getUserMedia({ audio: true, video: false })
@@ -75,79 +146,6 @@ startButton.addEventListener("click", () => {
     .catch((err) => {
       console.error(err);
     });
-
-  audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-
-  // Set up the speech config from the API key and region then set the language to French
-  var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-    "6b19ea6cfaa74e538bdd433daf387108",
-    "centralindia"
-  );
-  speechConfig.speechRecognitionLanguage = languageCode;
-  speechConfig.outputFormat = 1;
-  var reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-
-  // Setting up callback functions before starting recognition
-
-  var timeoutID;
-
-  // Called when a new word is picked up
-  reco.recognizing = function (s, e) {
-    output.innerText += "Recognizing: " + e.result.text + "\n";
-
-    // Clear the cancel timeout if words are heard
-    clearTimeout(timeoutID);
-  };
-
-  // Called when one phrase is finished
-  reco.recognized = function (s, e) {
-    if (e.result.text.length > 0) {
-      output.innerText += "Recognized Phrase: " + e.result.text + "\n\n";
-
-      // Add each lexical of NBest to an array
-      for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalLexicals += item.Lexical + " ";
-      }
-
-      // Check how many of the target words are in the total lexicals
-      var matchedWordsCount = 0;
-      for (const word of targetWords) {
-        if (totalLexicals.indexOf(word) != -1) {
-          matchedWordsCount += 1;
-        }
-      }
-
-      // End recognition if all target words are found
-      if (matchedWordsCount == targetWords.length) {
-        reco.stopContinuousRecognitionAsync();
-        output.innerText += "Done. Target successfully matched";
-      } else {
-        // Set timeout to stop recognition if no words are heard
-        timeoutID = setTimeout(() => {
-          reco.stopContinuousRecognitionAsync();
-          output.innerText +=
-            "Done. No speech heard in the last " + waitingPeriod + "ms\n";
-        }, waitingPeriod);
-      }
-
-      // Clear the lexicals for next recognition
-      totalLexicals = "";
-    }
-  };
-
-  // Called when recognition has stopped
-  reco.sessionStopped = function (s, e) {
-    // Stop the recording
-    webAudioRecorder.finishRecording();
-
-    // Re-enable the start button
-    startButton.disabled = false;
-  };
-
-  // Start recognition
-  reco.startContinuousRecognitionAsync();
-  output.innerText = "Recognition started\n\n";
-  startButton.disabled = true;
 });
 
 // UUID for file naming
