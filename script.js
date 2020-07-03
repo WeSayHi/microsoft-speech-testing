@@ -8,7 +8,7 @@ let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 
-let targetArrays = [["i want to speak english"], ["i want speak english"]];
+let targetArrays = [["je suis professeur"], ["professeure"]];
 
 // Formats the target phrase and splits it into an array of words
 function formatTarget(target) {
@@ -46,14 +46,14 @@ startButton.addEventListener("click", () => {
   var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
   // // Add words to phrase list so they are more easily recognized
-  // var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
-  //   recognizer
-  // );
-  // for (const targetArray of targetArrays) {
-  //   for (const targetPhrase of targetArray) {
-  //     phraseListGrammar.addPhrase(targetPhrase);
-  //   }
-  // }
+  var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
+    recognizer
+  );
+  for (const targetArray of targetArrays) {
+    for (const targetPhrase of targetArray) {
+      phraseListGrammar.addPhrase(targetPhrase);
+    }
+  }
 
   // Setting up callback functions before starting recognition
 
@@ -84,7 +84,6 @@ startButton.addEventListener("click", () => {
 
           // Check if the total ITN contains any unmatched words
           for (const word of targetWords) {
-            console.log(word);
             console.log(totalITN);
             if (totalITN.includes(word)) {
               console.log(word + " matches");
@@ -96,11 +95,14 @@ startButton.addEventListener("click", () => {
 
           // Remove any matched words from the target array
           for (const word of matchedWords) {
-            targetWords.splice(targetWords.indexOf(word), 1);
+            console.log("splicing " + word + " from " + targetWords);
+            if (targetWords.includes(word)) {
+              targetWords.splice(targetWords.indexOf(word), 1);
+            }
           }
 
           console.log("match", matchedWords);
-          console.log("target", targetWords);
+          console.log("target", targetWords + a + i);
 
           // End recognition if all target words are found
           if (targetWords.length == 0) {
@@ -139,7 +141,7 @@ startButton.addEventListener("click", () => {
     webAudioRecorder.finishRecording();
     startButton.disabled = false;
     recognizer.close();
-    // phraseListGrammar.clear();
+    phraseListGrammar.clear();
     if (match) {
       output.innerText +=
         "\nMatch found! " +
