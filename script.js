@@ -45,15 +45,15 @@ startButton.addEventListener("click", () => {
   speechConfig.outputFormat = 1;
   var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
-  // // Add words to phrase list so they are more easily recognized
-  var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
-    recognizer
-  );
-  for (const targetArray of targetArrays) {
-    for (const targetPhrase of targetArray) {
-      phraseListGrammar.addPhrase(targetPhrase);
-    }
-  }
+  // // // Add words to phrase list so they are more easily recognized
+  // var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
+  //   recognizer
+  // );
+  // for (const targetArray of targetArrays) {
+  //   for (const targetPhrase of targetArray) {
+  //     phraseListGrammar.addPhrase(targetPhrase);
+  //   }
+  // }
 
   // Setting up callback functions before starting recognition
 
@@ -141,7 +141,7 @@ startButton.addEventListener("click", () => {
     webAudioRecorder.finishRecording();
     startButton.disabled = false;
     recognizer.close();
-    phraseListGrammar.clear();
+    // phraseListGrammar.clear();
     if (match) {
       output.innerText +=
         "\nMatch found! " +
