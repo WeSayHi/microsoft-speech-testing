@@ -22,23 +22,22 @@ dropdown.addEventListener("change", function () {
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
   let targetArrays = [["je suis responsable je veux voyager"]];
-  var matchedWords = [];
-  var totalITN = "";
-  var cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
-  var match = null;
+  let totalITN = "";
+  let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
+  let match = null;
 
   // Set up the SpeechSDK config
-  var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-  var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+  let audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  let speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
     "90880843d02c4a43a84e8979afb0df38",
     "centralus"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
-  var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+  let recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
   // // // Add words to phrase list so they are more easily recognized
-  // var phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
+  // let phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
   //   recognizer
   // );
   // for (const targetArray of targetArrays) {
@@ -49,7 +48,7 @@ startButton.addEventListener("click", () => {
 
   // Setting up callback functions before starting recognition
 
-  var timeoutID;
+  let timeoutID;
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
@@ -95,61 +94,64 @@ startButton.addEventListener("click", () => {
                 item.ITN,
                 ""
               );
-              // Match if the cuttable phrase is empty
-              if (cuttableTargetArrays[a][i].trim().length == 0) {
-                if (!match) {
-                  match = {
-                    arrayIndex: a,
-                    index: i,
-                    word: targetArrays[a][i],
-                  };
-                  console.log("Cut Match!");
-                }
-                stopSession();
+              console.log("Cut down to", cuttableTargetArrays[a][i]);
+            }
+            if (
+              cuttableTargetArrays[a][i].trim().length == 0 ||
+              item.ITN.includes(cuttableTargetArrays[a][i].trim())
+            ) {
+              if (!match) {
+                match = {
+                  arrayIndex: a,
+                  index: i,
+                  word: targetArrays[a][i],
+                };
+                console.log("Cut Match!");
               }
+              stopSession();
             }
           }
 
-          // Make an array of each word in the phrase
-          const targetPhrase = targetArrays[a][i];
-          var targetWords = targetPhrase
-            .toLowerCase()
-            .split(" ")
-            .map((item) => (item = " " + item + " "));
+          // // Make an array of each word in the phrase
+          // const targetPhrase = targetArrays[a][i];
+          // let targetWords = targetPhrase
+          //   .toLowerCase()
+          //   .split(" ")
+          //   .map((item) => (item = " " + item + " "));
 
-          // Check if the total ITN contains any unmatched words
-          for (const word of targetWords) {
-            if (totalITN.includes(word)) {
-              console.log(word + " matches");
-              if (!matchedWords.includes(word)) {
-                matchedWords.push(word);
-              }
-            }
-          }
+          // // Check if the total ITN contains any unmatched words
+          // for (const word of targetWords) {
+          //   if (totalITN.includes(word)) {
+          //     console.log(word + " matches");
+          //     if (!matchedWords.includes(word)) {
+          //       matchedWords.push(word);
+          //     }
+          //   }
+          // }
 
-          // Remove any matched words from the target array
-          for (const word of matchedWords) {
-            if (targetWords.includes(word)) {
-              targetWords.splice(targetWords.indexOf(word), 1);
-            }
-          }
+          // // Remove any matched words from the target array
+          // for (const word of matchedWords) {
+          //   if (targetWords.includes(word)) {
+          //     targetWords.splice(targetWords.indexOf(word), 1);
+          //   }
+          // }
 
-          console.log("match", matchedWords);
-          console.log("target", targetWords);
+          // console.log("match", matchedWords);
+          // console.log("target", targetWords);
 
-          // End recognition if all target words are found
-          if (targetWords.length == 0) {
-            // If there are no matches yet, set the match
-            if (!match) {
-              match = {
-                arrayIndex: a,
-                index: i,
-                word: targetPhrase,
-              };
-              console.log("Match!");
-            }
-            stopSession();
-          }
+          // // End recognition if all target words are found
+          // if (targetWords.length == 0) {
+          //   // If there are no matches yet, set the match
+          //   if (!match) {
+          //     match = {
+          //       arrayIndex: a,
+          //       index: i,
+          //       word: targetPhrase,
+          //     };
+          //     console.log("Match!");
+          //   }
+          //   stopSession();
+          // }
         }
       }
     }
@@ -239,16 +241,16 @@ startButton.addEventListener("click", () => {
 // Generate UUID
 function uuid() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    var r = (Math.random() * 16) | 0,
+    let r = (Math.random() * 16) | 0,
       v = c == "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
 
 // Initialize AWS configuration
-var bucketName = "nfscratch";
-var bucketRegion = "us-east-1";
-var IdentityPoolId = "us-east-1:3efbe2a5-c38f-433a-8720-37b7b5f61a7d";
+let bucketName = "nfscratch";
+let bucketRegion = "us-east-1";
+let IdentityPoolId = "us-east-1:3efbe2a5-c38f-433a-8720-37b7b5f61a7d";
 
 AWS.config.update({
   region: bucketRegion,
@@ -257,7 +259,7 @@ AWS.config.update({
   }),
 });
 
-var s3 = new AWS.S3({
+let s3 = new AWS.S3({
   apiVersion: "2006-03-01",
   params: { Bucket: bucketName },
 });
@@ -265,8 +267,8 @@ var s3 = new AWS.S3({
 // Upload to S3
 function s3upload(file) {
   if (file) {
-    var fileName = file.name;
-    var filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
+    let fileName = file.name;
+    let filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
 
     s3.upload(
       {
