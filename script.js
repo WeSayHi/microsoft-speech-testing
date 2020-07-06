@@ -21,7 +21,7 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [["je suis responsable je veux voyager"]];
+  let targetArrays = [["je suis capable"], ["je veux artiste"]];
   let totalITN = "";
   let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
@@ -52,22 +52,22 @@ startButton.addEventListener("click", () => {
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
-    // // Quick match if recognized identical to a target word
-    // for (a = 0; a < targetArrays.length; a++) {
-    //   for (i = 0; i < targetArrays[a].length; i++) {
-    //     if (e.result.text.includes(targetArrays[a][i])) {
-    //       if (!match) {
-    //         match = {
-    //           arrayIndex: a,
-    //           index: i,
-    //           word: e.result.text,
-    //         };
-    //         console.log("Quick Match!");
-    //       }
-    //       stopSession();
-    //     }
-    //   }
-    // }
+    // Quick match if recognized identical to a target word
+    for (a = 0; a < targetArrays.length; a++) {
+      for (i = 0; i < targetArrays[a].length; i++) {
+        if (e.result.text.includes(targetArrays[a][i] + " ")) {
+          if (!match) {
+            match = {
+              arrayIndex: a,
+              index: i,
+              word: e.result.text,
+            };
+            console.log("Quick Match!");
+          }
+          stopSession();
+        }
+      }
+    }
 
     // Clear the cancel timeout if words are heard
     clearTimeout(timeoutID);
@@ -76,41 +76,44 @@ startButton.addEventListener("click", () => {
   // Called when one phrase is finished
   recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
-      // Add each ITN of NBest to a string
-      for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalITN += " " + item.ITN + " ";
-        output.innerText += "Recognized ITN: " + item.ITN + "\n";
-      }
-
       // Loop through the array of target arrays
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
           // Loop through each item of NBest
           for (const item of JSON.parse(e.result.privJson).NBest) {
-            // If the phrase contains the exact ITN, then remove that from the cuttable phrase
+            output.innerText += "Recognized ITN: " + item.ITN + "\n";
+
+            // If the phrase includes the ITN...
             if (cuttableTargetArrays[a][i].includes(item.ITN)) {
+              // ...then remove the ITN from the phrase
               cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
                 item.ITN,
                 ""
               );
               console.log("Cut down to", cuttableTargetArrays[a][i]);
             }
+
+            // If the phrase is completely removed or the ITN contains the phrase then match
             if (
               cuttableTargetArrays[a][i].trim().length == 0 ||
-              item.ITN.includes(cuttableTargetArrays[a][i].trim())
+              item.ITN.includes(cuttableTargetArrays[a][i].trim() + " ")
             ) {
-              if (!match) {
-                match = {
-                  arrayIndex: a,
-                  index: i,
-                  word: targetArrays[a][i],
-                };
-                console.log("Cut Match!");
-              }
+              match = {
+                arrayIndex: a,
+                index: i,
+                word: targetArrays[a][i],
+              };
+              console.log("Cut Match!");
               stopSession();
             }
           }
+
+          // // Add each ITN of NBest to a string
+          // for (const item of JSON.parse(e.result.privJson).NBest) {
+          //   totalITN += " " + item.ITN + " ";
+          //   output.innerText += "Recognized ITN: " + item.ITN + "\n";
+          // }
 
           // // Make an array of each word in the phrase
           // const targetPhrase = targetArrays[a][i];
@@ -156,10 +159,10 @@ startButton.addEventListener("click", () => {
       }
     }
 
-    // Clear total ITN
-    totalITN = "";
+    // // Clear total ITN
+    // totalITN = "";
 
-    // Set timeout to stop recognition if no words are heard
+    // Set timeout to stop recognition if there is no match
     if (!match) {
       timeoutID = setTimeout(() => {
         stopSession();
