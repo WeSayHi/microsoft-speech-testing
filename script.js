@@ -30,8 +30,8 @@ startButton.addEventListener("click", () => {
   // Set up the SpeechSDK config
   var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-    "6b19ea6cfaa74e538bdd433daf387108",
-    "centralindia"
+    "90880843d02c4a43a84e8979afb0df38",
+    "centralus"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
@@ -53,6 +53,24 @@ startButton.addEventListener("click", () => {
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
+    console.log(e.result.text);
+    // Quick match if recognized identical to a target word
+    for (a = 0; a < targetArrays.length; a++) {
+      for (i = 0; i < targetArrays[a].length; i++) {
+        if (e.result.text == targetArrays[a][i]) {
+          if (!match) {
+            match = {
+              arrayIndex: a,
+              index: i,
+              word: e.result.text,
+            };
+            console.log("Quick Match!");
+          }
+          stopSession();
+        }
+      }
+    }
+
     // Clear the cancel timeout if words are heard
     clearTimeout(timeoutID);
   };
@@ -110,9 +128,7 @@ startButton.addEventListener("click", () => {
               };
               console.log("Match!");
             }
-            console.log("Already matched");
-
-            recognizer.stopContinuousRecognitionAsync();
+            stopSession();
           }
         }
       }
@@ -124,18 +140,19 @@ startButton.addEventListener("click", () => {
     // Set timeout to stop recognition if no words are heard
     if (!match) {
       timeoutID = setTimeout(() => {
-        recognizer.stopContinuousRecognitionAsync();
+        stopSession();
         output.innerText +=
           "\nDone. Didn't recognize speech for " + waitingPeriod + "ms\n";
       }, waitingPeriod);
     }
   };
 
-  // Called when recognition has stopped
-  recognizer.sessionStopped = function (s, e) {
-    webAudioRecorder.finishRecording();
-    startButton.disabled = false;
+  // To be called to stop the session
+  function stopSession() {
+    recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
+    // webAudioRecorder.finishRecording();
+    startButton.disabled = false;
     // phraseListGrammar.clear();
     if (match) {
       output.innerText +=
@@ -148,7 +165,7 @@ startButton.addEventListener("click", () => {
         match.word +
         "\n";
     }
-  };
+  }
 
   // Start recognition
   recognizer.startContinuousRecognitionAsync();

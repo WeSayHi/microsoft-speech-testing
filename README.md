@@ -63,8 +63,8 @@ let targetArrays = [["je suis professeur", "je suis professeure"], ["professeur"
   // Set up the SpeechSDK config
   var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-    "6b19ea6cfaa74e538bdd433daf387108",
-    "centralindia"
+    "90880843d02c4a43a84e8979afb0df38",
+    "centralus"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
@@ -134,7 +134,7 @@ let targetArrays = [["je suis professeur", "je suis professeure"], ["professeur"
             }
             console.log("Already matched");
 
-            recognizer.stopContinuousRecognitionAsync();
+          stopSession();
           }
         }
       }
@@ -146,17 +146,29 @@ let targetArrays = [["je suis professeur", "je suis professeure"], ["professeur"
     // Set timeout to stop recognition if no words are heard
     if (!match) {
       timeoutID = setTimeout(() => {
-        recognizer.stopContinuousRecognitionAsync();
+          stopSession();
       }, waitingPeriod);
     }
   };
 
-  // Called when recognition has stopped
-  recognizer.sessionStopped = function (s, e) {
-    webAudioRecorder.finishRecording();
-    startButton.disabled = false;
+  // To be called to stop the session
+  function stopSession() {
+    recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
-  };
+    startButton.disabled = false;
+    if (match) {
+      output.innerText +=
+        "\nMatch found! " +
+        "Array index: " +
+        match.arrayIndex +
+        ", Phrase index: " +
+        match.index +
+        ", Phrase: " +
+        match.word +
+        "\n";
+    }
+  }
+
 
   // Start recognition
   recognizer.startContinuousRecognitionAsync();
