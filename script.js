@@ -8,13 +8,6 @@ let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 
-let targetArrays = [
-  ["je suis professeur je suis responsable"],
-  ["je suis professeure je suis responsable"],
-  ["je suis professeur je suis responsables"],
-  ["je suis professeure je suis responsables"],
-];
-
 // Changes the waiting period based on the input
 waitingPeriodInput.addEventListener("change", function () {
   waitingPeriod = waitingPeriodInput.value;
@@ -28,9 +21,11 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
+  let targetArrays = [["je suis responsable je veux voyager"]];
   var matchedWords = [];
-  let totalITN = "";
-  let match = null;
+  var totalITN = "";
+  var cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
+  var match = null;
 
   // Set up the SpeechSDK config
   var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
@@ -58,22 +53,22 @@ startButton.addEventListener("click", () => {
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
-    // Quick match if recognized identical to a target word
-    for (a = 0; a < targetArrays.length; a++) {
-      for (i = 0; i < targetArrays[a].length; i++) {
-        if (e.result.text == targetArrays[a][i]) {
-          if (!match) {
-            match = {
-              arrayIndex: a,
-              index: i,
-              word: e.result.text,
-            };
-            console.log("Quick Match!");
-          }
-          stopSession();
-        }
-      }
-    }
+    // // Quick match if recognized identical to a target word
+    // for (a = 0; a < targetArrays.length; a++) {
+    //   for (i = 0; i < targetArrays[a].length; i++) {
+    //     if (e.result.text.includes(targetArrays[a][i])) {
+    //       if (!match) {
+    //         match = {
+    //           arrayIndex: a,
+    //           index: i,
+    //           word: e.result.text,
+    //         };
+    //         console.log("Quick Match!");
+    //       }
+    //       stopSession();
+    //     }
+    //   }
+    // }
 
     // Clear the cancel timeout if words are heard
     clearTimeout(timeoutID);
@@ -92,18 +87,26 @@ startButton.addEventListener("click", () => {
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
-          // Check for exact matches
+          // Loop through each item of NBest
           for (const item of JSON.parse(e.result.privJson).NBest) {
-            if (item.ITN == targetArrays[a][i]) {
-              if (!match) {
-                match = {
-                  arrayIndex: a,
-                  index: i,
-                  word: e.result.text,
-                };
-                console.log("Exact Match!");
+            // If the phrase contains the exact ITN, then remove that from the cuttable phrase
+            if (cuttableTargetArrays[a][i].includes(item.ITN)) {
+              cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
+                item.ITN,
+                ""
+              );
+              // Match if the cuttable phrase is empty
+              if (cuttableTargetArrays[a][i].trim().length == 0) {
+                if (!match) {
+                  match = {
+                    arrayIndex: a,
+                    index: i,
+                    word: targetArrays[a][i],
+                  };
+                  console.log("Cut Match!");
+                }
+                stopSession();
               }
-              stopSession();
             }
           }
 
@@ -168,7 +171,7 @@ startButton.addEventListener("click", () => {
   function stopSession() {
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
-    // webAudioRecorder.finishRecording();
+    webAudioRecorder.finishRecording();
     startButton.disabled = false;
     // phraseListGrammar.clear();
     if (match) {
