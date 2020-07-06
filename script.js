@@ -8,7 +8,12 @@ let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 
-let targetArrays = [["je suis capable"], ["je veux"]];
+let targetArrays = [
+  ["je suis professeur je suis responsable"],
+  ["je suis professeure je suis responsable"],
+  ["je suis professeur je suis responsables"],
+  ["je suis professeure je suis responsables"],
+];
 
 // Changes the waiting period based on the input
 waitingPeriodInput.addEventListener("change", function () {
@@ -53,7 +58,6 @@ startButton.addEventListener("click", () => {
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
-    console.log(e.result.text);
     // Quick match if recognized identical to a target word
     for (a = 0; a < targetArrays.length; a++) {
       for (i = 0; i < targetArrays[a].length; i++) {
@@ -88,6 +92,21 @@ startButton.addEventListener("click", () => {
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
+          // Check for exact matches
+          for (const item of JSON.parse(e.result.privJson).NBest) {
+            if (item.ITN == targetArrays[a][i]) {
+              if (!match) {
+                match = {
+                  arrayIndex: a,
+                  index: i,
+                  word: e.result.text,
+                };
+                console.log("Exact Match!");
+              }
+              stopSession();
+            }
+          }
+
           // Make an array of each word in the phrase
           const targetPhrase = targetArrays[a][i];
           var targetWords = targetPhrase
@@ -97,7 +116,6 @@ startButton.addEventListener("click", () => {
 
           // Check if the total ITN contains any unmatched words
           for (const word of targetWords) {
-            console.log(totalITN);
             if (totalITN.includes(word)) {
               console.log(word + " matches");
               if (!matchedWords.includes(word)) {
@@ -108,14 +126,13 @@ startButton.addEventListener("click", () => {
 
           // Remove any matched words from the target array
           for (const word of matchedWords) {
-            console.log("splicing " + word + " from " + targetWords);
             if (targetWords.includes(word)) {
               targetWords.splice(targetWords.indexOf(word), 1);
             }
           }
 
           console.log("match", matchedWords);
-          console.log("target", targetWords + a + i);
+          console.log("target", targetWords);
 
           // End recognition if all target words are found
           if (targetWords.length == 0) {
