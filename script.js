@@ -8,15 +8,7 @@ let languageCode = dropdown[dropdown.selectedIndex].value;
 let audioElement = document.getElementById("audio");
 let webAudioRecorder;
 
-let targetArrays = [["je suis professeur"], ["professeure"]];
-
-// Formats the target phrase and splits it into an array of words
-function formatTarget(target) {
-  return target
-    .toLowerCase()
-    .split(" ")
-    .map((item) => (item = " " + item + " "));
-}
+let targetArrays = [["je suis capable"], ["je veux"]];
 
 // Changes the waiting period based on the input
 waitingPeriodInput.addEventListener("change", function () {
@@ -36,7 +28,7 @@ startButton.addEventListener("click", () => {
   let match = null;
 
   // Set up the SpeechSDK config
-  audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
     "6b19ea6cfaa74e538bdd433daf387108",
     "centralindia"
@@ -80,7 +72,10 @@ startButton.addEventListener("click", () => {
         for (i = 0; i < targetArrays[a].length; i++) {
           // Make an array of each word in the phrase
           const targetPhrase = targetArrays[a][i];
-          var targetWords = formatTarget(targetPhrase);
+          var targetWords = targetPhrase
+            .toLowerCase()
+            .split(" ")
+            .map((item) => (item = " " + item + " "));
 
           // Check if the total ITN contains any unmatched words
           for (const word of targetWords) {
