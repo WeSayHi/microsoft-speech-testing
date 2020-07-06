@@ -1,5 +1,7 @@
 # Azure STT Testing
 
+To test out the improved STT, run index.js (you can run with Live Server in VSCode)
+
 ## Implementation into existing site
 
 ### Install Dependencies:
