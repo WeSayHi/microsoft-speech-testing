@@ -46,36 +46,52 @@ import SpeechSDK from "microsoft-cognitiveservices-speech-sdk"
 
 Use this code in the function listenToTheUser in webapp/src/containers/auth/practice/index.js. The final output will be the match variable which will be null when there are no matches or will contain an object consisting of arrayIndex (index of the array that the word/phrase is in), index (index of the word/phrase inside that array), and word (the word/phrase string)
 
-Get the target arrays from currentICObject in your code. An example of target arrays is...
-
-```
-let targetArrays = [["je suis professeur", "je suis professeure"], ["professeur", "professeure", "fais", "fait", "sœur", "fasse"]];
-```
+You can get the target arrays from currentICObject in your code
 
 ```
  // Initialize variables local to each recognition session
-  var matchedWords = [];
-  var totalITN = "";
-  var match = null;
-  var waitingPeriod = 3000 // or what Michiyo and Nate find is best when testing
-  var languageCode = "fr-FR" // or the language to recognize from
+  let targetArrays = [["je suis capable"], ["je veux artiste"]];
+  let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
+  let match = null;
+  let waitingPeriod = 2000 // 2000ms possibly subject to change
+  let languageCode = "fr-FR"
+  let masterTimer = setTimeout(() => {
+    stopSession();
+  }, 120000);
 
   // Set up the SpeechSDK config
-  var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-  var speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+  let audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  let speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
     "90880843d02c4a43a84e8979afb0df38",
     "centralus"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
-  var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+  let recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
   // Setting up callback functions before starting recognition
 
-  var timeoutID;
+  let timeoutID;
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
+    // Quick match if recognized text contains a target phrase
+    for (a = 0; a < targetArrays.length; a++) {
+      for (i = 0; i < targetArrays[a].length; i++) {
+        if (e.result.text.includes(targetArrays[a][i] + " ")) {
+          if (!match) {
+            match = {
+              arrayIndex: a,
+              index: i,
+              word: e.result.text,
+            };
+            console.log("Quick Match!");
+          }
+          stopSession();
+        }
+      }
+    }
+
     // Clear the cancel timeout if words are heard
     clearTimeout(timeoutID);
   };
@@ -83,97 +99,56 @@ let targetArrays = [["je suis professeur", "je suis professeure"], ["professeur"
   // Called when one phrase is finished
   recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
-      // Add each ITN of NBest to a string
-      for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalITN += " " + item.ITN + " ";
-      }
-
       // Loop through the array of target arrays
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
-          // Make an array of each word in the phrase
-          const targetPhrase = targetArrays[a][i];
-          var targetWords = targetPhrase
-            .toLowerCase()
-            .split(" ")
-            .map((item) => (item = " " + item + " "));
+          // Loop through each item of NBest
+          for (const item of JSON.parse(e.result.privJson).NBest) {
 
-          // Check if the total ITN contains any unmatched words
-          for (const word of targetWords) {
-            console.log(totalITN);
-            if (totalITN.includes(word)) {
-              console.log(word + " matches");
-              if (!matchedWords.includes(word)) {
-                matchedWords.push(word);
-              }
+            // If the phrase includes the ITN...
+            if (cuttableTargetArrays[a][i].includes(item.ITN)) {
+              // ...then remove the ITN from the phrase
+              cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
+                item.ITN,
+                ""
+              );
             }
-          }
 
-          // Remove any matched words from the target array
-          for (const word of matchedWords) {
-            console.log("splicing " + word + " from " + targetWords);
-            if (targetWords.includes(word)) {
-              targetWords.splice(targetWords.indexOf(word), 1);
-            }
-          }
-
-          console.log("match", matchedWords);
-          console.log("target", targetWords + a + i);
-
-          // End recognition if all target words are found
-          if (targetWords.length == 0) {
-            // If there are no matches yet, set the match
-            if (!match) {
+            // If the phrase is completely removed or the ITN contains the phrase then match
+            if (
+              cuttableTargetArrays[a][i].trim().length == 0 ||
+              item.ITN.includes(cuttableTargetArrays[a][i].trim() + " ")
+            ) {
               match = {
                 arrayIndex: a,
                 index: i,
-                word: targetPhrase,
+                word: targetArrays[a][i],
               };
-              console.log("Match!");
+              console.log("Cut Match!");
+              stopSession();
             }
-            console.log("Already matched");
-
-          stopSession();
           }
         }
       }
     }
 
-    // Clear total ITN
-    totalITN = "";
-
-    // Set timeout to stop recognition if no words are heard
     if (!match) {
       timeoutID = setTimeout(() => {
-          stopSession();
+        stopSession();
       }, waitingPeriod);
     }
   };
 
   // To be called to stop the session
   function stopSession() {
+    clearTimeout(masterTimer);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
-    startButton.disabled = false;
-    if (match) {
-      output.innerText +=
-        "\nMatch found! " +
-        "Array index: " +
-        match.arrayIndex +
-        ", Phrase index: " +
-        match.index +
-        ", Phrase: " +
-        match.word +
-        "\n";
-    }
   }
-
 
   // Start recognition
   recognizer.startContinuousRecognitionAsync();
-  startButton.disabled = true;
-  audioElement.controls = false;
 
 ```
 

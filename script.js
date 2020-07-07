@@ -25,6 +25,9 @@ startButton.addEventListener("click", () => {
   let totalITN = "";
   let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
+  let masterTimer = setTimeout(() => {
+    stopSession();
+  }, 120000);
 
   // Set up the SpeechSDK config
   let audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
@@ -52,7 +55,7 @@ startButton.addEventListener("click", () => {
 
   // Called when a new word is picked up
   recognizer.recognizing = function (s, e) {
-    // Quick match if recognized identical to a target word
+    // Quick match if recognized text contains a target phrase
     for (a = 0; a < targetArrays.length; a++) {
       for (i = 0; i < targetArrays[a].length; i++) {
         if (e.result.text.includes(targetArrays[a][i] + " ")) {
@@ -174,6 +177,7 @@ startButton.addEventListener("click", () => {
 
   // To be called to stop the session
   function stopSession() {
+    clearTimeout(masterTimer);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
     webAudioRecorder.finishRecording();
