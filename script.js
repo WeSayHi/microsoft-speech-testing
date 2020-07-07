@@ -1,11 +1,11 @@
 // Initialize instances and variables
-let startButton = document.getElementById("start-button");
-let output = document.getElementById("output-text");
-let waitingPeriodInput = document.getElementById("waiting-period-input");
-let waitingPeriod = waitingPeriodInput.value;
-let dropdown = document.getElementById("language-dropdown");
-let languageCode = dropdown[dropdown.selectedIndex].value;
-let audioElement = document.getElementById("audio");
+const startButton = document.getElementById("start-button");
+const output = document.getElementById("output-text");
+const waitingPeriodInput = document.getElementById("waiting-period-input");
+const waitingPeriod = waitingPeriodInput.value;
+const dropdown = document.getElementById("language-dropdown");
+const languageCode = dropdown[dropdown.selectedIndex].value;
+const audioElement = document.getElementById("audio");
 let webAudioRecorder;
 
 // Changes the waiting period based on the input
@@ -22,22 +22,21 @@ dropdown.addEventListener("change", function () {
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
   let targetArrays = [["je suis capable"], ["je suis artiste je suis libre"]];
-  let totalITN = "";
-  let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
+  const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
-  let masterTimer = setTimeout(() => {
+  const masterTimer = setTimeout(() => {
     stopSession();
   }, 120000);
 
   // Set up the SpeechSDK config
-  let audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-  let speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
     "90880843d02c4a43a84e8979afb0df38",
     "centralus"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
-  let recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+  const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
   // // // Add words to phrase list so they are more easily recognized
   // let phraseListGrammar = SpeechSDK.PhraseListGrammar.fromRecognizer(
@@ -58,7 +57,6 @@ startButton.addEventListener("click", () => {
     // Quick match if recognized text contains a target phrase
     for (a = 0; a < targetArrays.length; a++) {
       for (i = 0; i < targetArrays[a].length; i++) {
-        console.log(e.result.text);
         if (e.result.text == targetArrays[a][i]) {
           if (!match) {
             match = {
@@ -80,9 +78,8 @@ startButton.addEventListener("click", () => {
   // Called when one phrase is finished
   recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
-      // Add each ITN of NBest to a string
+      // Log each ITN
       for (const item of JSON.parse(e.result.privJson).NBest) {
-        totalITN += " " + item.ITN + " ";
         output.innerText += "Recognized ITN: " + item.ITN + "\n";
       }
 
@@ -90,89 +87,74 @@ startButton.addEventListener("click", () => {
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
-          // Check if the target phrase has duplicates
-          let hasDuplicates = false;
-          let existingWords = [];
-          const wordsArray = targetArrays[a][i].toLowerCase().split(" ");
-          for (const word of wordsArray) {
-            if (existingWords.indexOf(word) != -1) {
-              hasDuplicates = true;
+          // Initialize variables local to the phrase
+          const targetPhrase = targetArrays[a][i].toLowerCase().trim();
+          const targetWords = targetPhrase.split(" ");
+          let missingPhrases = [];
+
+          // Loop through the NBest array
+          for (const item of JSON.parse(e.result.privJson).NBest) {
+            let missingPhrase = "";
+            let ITN = item.ITN;
+
+            // Match out if the ITN contains the target phrase
+            if (ITN.includes(targetPhrase)) {
+              match = {
+                arrayIndex: a,
+                index: i,
+                word: originalTargetArrays[a][i],
+              };
+              stopSession();
             } else {
-              existingWords.push(word);
+              // Loop through the target words array
+              for (const word of targetWords) {
+                // If the ITN does not contain the target word, add it to the missing phrase
+                if (!ITN.includes(word)) {
+                  missingPhrase += word + " ";
+                  console.log(ITN);
+                }
+              }
+
+              // If there is a missing phrase, add it to the missing phrases array
+              if (missingPhrase.length > 0) {
+                missingPhrases.push(missingPhrase.trim());
+              }
             }
           }
 
-          // If the phrase has duplicate words, use the cut method
-          if (hasDuplicates) {
-            // Loop through each item of NBest
-            for (const item of JSON.parse(e.result.privJson).NBest) {
-              // If the phrase includes the ITN...
-              if (cuttableTargetArrays[a][i].includes(item.ITN)) {
-                // ...then remove the ITN from the phrase
-                cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
-                  item.ITN,
-                  ""
-                );
-                console.log("Cut down to", cuttableTargetArrays[a][i]);
-              }
+          // Match out if there are no missing phrases
+          if (missingPhrases.length == 0) {
+            match = {
+              arrayIndex: a,
+              index: i,
+              word: originalTargetArrays[a][i],
+            };
+            stopSession();
+          }
 
-              // If the phrase is completely removed or the ITN contains the phrase then match
-              if (
-                cuttableTargetArrays[a][i].trim().length == 0 ||
-                item.ITN.includes(cuttableTargetArrays[a][i].trim() + " ")
-              ) {
-                match = {
-                  arrayIndex: a,
-                  index: i,
-                  word: targetArrays[a][i],
-                };
-                console.log("Cut Match!");
-                stopSession();
+          // Find the words common in all of the missing phrases
+          let set = {};
+          missingPhrases.forEach(function (a, i) {
+            var tokens = a.match(/\w+/g);
+            if (!i) {
+              tokens.forEach(function (t) {
+                set[t] = 1;
+              });
+            } else {
+              for (const k in set) {
+                if (tokens.indexOf(k) < 0) delete set[k];
               }
             }
-          } else {
-            // Make an array of each word in the phrase
-            const targetPhrase = targetArrays[a][i];
-            let targetWords = targetPhrase
-              .toLowerCase()
-              .split(" ")
-              .map((item) => (item = " " + item + " "));
+          });
+          const newTargetWords = Object.keys(set);
 
-            // Check if the total ITN contains any unmatched words
-            let matchedWords = [];
-            for (const word of targetWords) {
-              if (totalITN.includes(word)) {
-                console.log(word + " matches");
-                if (!matchedWords.includes(word)) {
-                  console.log("mathcshjkdls");
-                  matchedWords.push(word);
-                }
-              }
-            }
+          console.log("Missing phrases", missingPhrases);
+          console.log("Common missing", newTargetWords);
 
-            // Remove any matched words from the target array
-            for (const word of matchedWords) {
-              if (targetWords.includes(word)) {
-                targetWords.splice(targetWords.indexOf(word), 1);
-              }
-            }
-
-            console.log("match", matchedWords);
-            console.log("target", targetWords);
-
-            // End recognition if all target words are found
-            if (targetWords.length == 0) {
-              // If there are no matches yet, set the match
-              if (!match) {
-                match = {
-                  arrayIndex: a,
-                  index: i,
-                  word: targetPhrase,
-                };
-                console.log("Match!");
-              }
-              stopSession();
-            }
+          // Update the phrase so that it is a string of only the words not yet found
+          targetArrays[a][i] = "";
+          for (const word of newTargetWords) {
+            targetArrays[a][i] += word + " ";
           }
         }
       }
@@ -193,7 +175,7 @@ startButton.addEventListener("click", () => {
     clearTimeout(masterTimer);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
-    // webAudioRecorder.finishRecording();
+    webAudioRecorder.finishRecording();
     startButton.disabled = false;
     // phraseListGrammar.clear();
     if (match) {
@@ -221,9 +203,9 @@ startButton.addEventListener("click", () => {
     .getUserMedia({ audio: true, video: false })
     .then((stream) => {
       getUserMediaStream = stream;
-      let AudioContext = window.AudioContext || window.webkitAudioContext;
-      let audioContext = new AudioContext();
-      let source = audioContext.createMediaStreamSource(stream);
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
 
       webAudioRecorder = new WebAudioRecorder(source, {
         workerDir: "web_audio_recorder_js/",
@@ -242,7 +224,7 @@ startButton.addEventListener("click", () => {
         blob.name = uuid() + ".ogg";
         // s3upload(blob);
 
-        let audioElementSource = window.URL.createObjectURL(blob);
+        const audioElementSource = window.URL.createObjectURL(blob);
         audioElement.src = audioElementSource;
         audioElement.controls = true;
       };
@@ -279,7 +261,7 @@ AWS.config.update({
   }),
 });
 
-let s3 = new AWS.S3({
+const s3 = new AWS.S3({
   apiVersion: "2006-03-01",
   params: { Bucket: bucketName },
 });
@@ -287,8 +269,8 @@ let s3 = new AWS.S3({
 // Upload to S3
 function s3upload(file) {
   if (file) {
-    let fileName = file.name;
-    let filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
+    const fileName = file.name;
+    const filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
 
     s3.upload(
       {
