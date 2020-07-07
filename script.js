@@ -21,7 +21,7 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [["i go to the or"], ["je veux artiste"]];
+  let targetArrays = [["je suis capable"], ["je suis artiste je suis libre"]];
   let totalITN = "";
   let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
@@ -80,91 +80,103 @@ startButton.addEventListener("click", () => {
   // Called when one phrase is finished
   recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
+      // Add each ITN of NBest to a string
+      for (const item of JSON.parse(e.result.privJson).NBest) {
+        totalITN += " " + item.ITN + " ";
+        output.innerText += "Recognized ITN: " + item.ITN + "\n";
+      }
+
       // Loop through the array of target arrays
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
-          // Loop through each item of NBest
-          for (const item of JSON.parse(e.result.privJson).NBest) {
-            output.innerText += "Recognized ITN: " + item.ITN + "\n";
-
-            // If the phrase includes the ITN...
-            if (cuttableTargetArrays[a][i].includes(item.ITN)) {
-              // ...then remove the ITN from the phrase
-              cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
-                item.ITN,
-                ""
-              );
-              console.log("Cut down to", cuttableTargetArrays[a][i]);
-            }
-
-            // If the phrase is completely removed or the ITN contains the phrase then match
-            if (
-              cuttableTargetArrays[a][i].trim().length == 0 ||
-              item.ITN.includes(cuttableTargetArrays[a][i].trim() + " ")
-            ) {
-              match = {
-                arrayIndex: a,
-                index: i,
-                word: targetArrays[a][i],
-              };
-              console.log("Cut Match!");
-              stopSession();
+          // Check if the target phrase has duplicates
+          let hasDuplicates = false;
+          let existingWords = [];
+          const wordsArray = targetArrays[a][i].toLowerCase().split(" ");
+          for (const word of wordsArray) {
+            if (existingWords.indexOf(word) != -1) {
+              hasDuplicates = true;
+            } else {
+              existingWords.push(word);
             }
           }
 
-          // // Add each ITN of NBest to a string
-          // for (const item of JSON.parse(e.result.privJson).NBest) {
-          //   totalITN += " " + item.ITN + " ";
-          //   output.innerText += "Recognized ITN: " + item.ITN + "\n";
-          // }
+          // If the phrase has duplicate words, use the cut method
+          if (hasDuplicates) {
+            // Loop through each item of NBest
+            for (const item of JSON.parse(e.result.privJson).NBest) {
+              // If the phrase includes the ITN...
+              if (cuttableTargetArrays[a][i].includes(item.ITN)) {
+                // ...then remove the ITN from the phrase
+                cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
+                  item.ITN,
+                  ""
+                );
+                console.log("Cut down to", cuttableTargetArrays[a][i]);
+              }
 
-          // // Make an array of each word in the phrase
-          // const targetPhrase = targetArrays[a][i];
-          // let targetWords = targetPhrase
-          //   .toLowerCase()
-          //   .split(" ")
-          //   .map((item) => (item = " " + item + " "));
+              // If the phrase is completely removed or the ITN contains the phrase then match
+              if (
+                cuttableTargetArrays[a][i].trim().length == 0 ||
+                item.ITN.includes(cuttableTargetArrays[a][i].trim() + " ")
+              ) {
+                match = {
+                  arrayIndex: a,
+                  index: i,
+                  word: targetArrays[a][i],
+                };
+                console.log("Cut Match!");
+                stopSession();
+              }
+            }
+          } else {
+            // Make an array of each word in the phrase
+            const targetPhrase = targetArrays[a][i];
+            let targetWords = targetPhrase
+              .toLowerCase()
+              .split(" ")
+              .map((item) => (item = " " + item + " "));
 
-          // // Check if the total ITN contains any unmatched words
-          // for (const word of targetWords) {
-          //   if (totalITN.includes(word)) {
-          //     console.log(word + " matches");
-          //     if (!matchedWords.includes(word)) {
-          //       matchedWords.push(word);
-          //     }
-          //   }
-          // }
+            // Check if the total ITN contains any unmatched words
+            let matchedWords = [];
+            for (const word of targetWords) {
+              if (totalITN.includes(word)) {
+                console.log(word + " matches");
+                if (!matchedWords.includes(word)) {
+                  console.log("mathcshjkdls");
+                  matchedWords.push(word);
+                }
+              }
+            }
 
-          // // Remove any matched words from the target array
-          // for (const word of matchedWords) {
-          //   if (targetWords.includes(word)) {
-          //     targetWords.splice(targetWords.indexOf(word), 1);
-          //   }
-          // }
+            // Remove any matched words from the target array
+            for (const word of matchedWords) {
+              if (targetWords.includes(word)) {
+                targetWords.splice(targetWords.indexOf(word), 1);
+              }
+            }
 
-          // console.log("match", matchedWords);
-          // console.log("target", targetWords);
+            console.log("match", matchedWords);
+            console.log("target", targetWords);
 
-          // // End recognition if all target words are found
-          // if (targetWords.length == 0) {
-          //   // If there are no matches yet, set the match
-          //   if (!match) {
-          //     match = {
-          //       arrayIndex: a,
-          //       index: i,
-          //       word: targetPhrase,
-          //     };
-          //     console.log("Match!");
-          //   }
-          //   stopSession();
-          // }
+            // End recognition if all target words are found
+            if (targetWords.length == 0) {
+              // If there are no matches yet, set the match
+              if (!match) {
+                match = {
+                  arrayIndex: a,
+                  index: i,
+                  word: targetPhrase,
+                };
+                console.log("Match!");
+              }
+              stopSession();
+            }
+          }
         }
       }
     }
-
-    // // Clear total ITN
-    // totalITN = "";
 
     // Set timeout to stop recognition if there is no match
     if (!match) {
@@ -181,7 +193,7 @@ startButton.addEventListener("click", () => {
     clearTimeout(masterTimer);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
-    webAudioRecorder.finishRecording();
+    // webAudioRecorder.finishRecording();
     startButton.disabled = false;
     // phraseListGrammar.clear();
     if (match) {
