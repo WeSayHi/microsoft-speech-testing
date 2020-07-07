@@ -21,7 +21,7 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [["je suis capable"], ["je veux artiste"]];
+  let targetArrays = [["i go to the or"], ["je veux artiste"]];
   let totalITN = "";
   let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
@@ -58,7 +58,8 @@ startButton.addEventListener("click", () => {
     // Quick match if recognized text contains a target phrase
     for (a = 0; a < targetArrays.length; a++) {
       for (i = 0; i < targetArrays[a].length; i++) {
-        if (e.result.text.includes(targetArrays[a][i] + " ")) {
+        console.log(e.result.text);
+        if (e.result.text == targetArrays[a][i]) {
           if (!match) {
             match = {
               arrayIndex: a,

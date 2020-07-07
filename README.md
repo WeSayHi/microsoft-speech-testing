@@ -78,7 +78,7 @@ You can get the target arrays from currentICObject in your code
     // Quick match if recognized text contains a target phrase
     for (a = 0; a < targetArrays.length; a++) {
       for (i = 0; i < targetArrays[a].length; i++) {
-        if (e.result.text.includes(targetArrays[a][i] + " ")) {
+        if (e.result.text == targetArrays[a][i]) {
           if (!match) {
             match = {
               arrayIndex: a,
