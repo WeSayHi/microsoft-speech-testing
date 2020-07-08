@@ -6,25 +6,7 @@ To test out the improved STT, run index.js (you can run with Live Server in VSCo
 
 ### Install Dependencies:
 
-First, install web-audio-recorder-js with...
-
-```
-npm install web-audio-recorder-js
-```
-
-and reference in the code with...
-
-```
-const SpeechSDK = require("web-audio-recorder-js")
-```
-
-or...
-
-```
-import SpeechSDK from "web-audio-recorder-js"
-```
-
-Next, install the speech SDK with...
+Install the speech SDK with...
 
 ```
 npm install microsoft-cognitiveservices-speech-sdk
