@@ -49,25 +49,25 @@ Use this code in the function listenToTheUser in webapp/src/containers/auth/prac
 You can get the target arrays from currentICObject in your code
 
 ```
- // Initialize variables local to each recognition session
-  let targetArrays = [["je suis capable"], ["je veux artiste"]];
-  let cuttableTargetArrays = JSON.parse(JSON.stringify(targetArrays));
+  // Initialize variables local to each recognition session
+  let targetArrays = [
+    ["soy responsable quiero viajar", "soy responsables quiero viajar"],
+  ];
+  const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
-  let waitingPeriod = 2000 // 2000ms possibly subject to change
-  let languageCode = "fr-FR"
-  let masterTimer = setTimeout(() => {
+  const masterTimer = setTimeout(() => {
     stopSession();
   }, 120000);
 
   // Set up the SpeechSDK config
-  let audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-  let speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
     "90880843d02c4a43a84e8979afb0df38",
     "centralus"
   );
   speechConfig.speechRecognitionLanguage = languageCode;
   speechConfig.outputFormat = 1;
-  let recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+  const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
   // Setting up callback functions before starting recognition
 
@@ -85,7 +85,6 @@ You can get the target arrays from currentICObject in your code
               index: i,
               word: e.result.text,
             };
-            console.log("Quick Match!");
           }
           stopSession();
         }
@@ -103,36 +102,78 @@ You can get the target arrays from currentICObject in your code
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
         for (i = 0; i < targetArrays[a].length; i++) {
-          // Loop through each item of NBest
+          // Initialize variables local to the phrase
+          const targetPhrase = targetArrays[a][i].toLowerCase().trim();
+          const targetWords = targetPhrase.split(" ");
+          let missingPhrases = [];
+
+          // Loop through the NBest array
           for (const item of JSON.parse(e.result.privJson).NBest) {
+            let missingPhrase = "";
+            let ITN = item.ITN;
 
-            // If the phrase includes the ITN...
-            if (cuttableTargetArrays[a][i].includes(item.ITN)) {
-              // ...then remove the ITN from the phrase
-              cuttableTargetArrays[a][i] = cuttableTargetArrays[a][i].replace(
-                item.ITN,
-                ""
-              );
-            }
-
-            // If the phrase is completely removed or the ITN contains the phrase then match
-            if (
-              cuttableTargetArrays[a][i].trim().length == 0 ||
-              item.ITN.includes(cuttableTargetArrays[a][i].trim() + " ")
-            ) {
+            // Match out if the ITN contains the target phrase
+            if (ITN.includes(targetPhrase)) {
               match = {
                 arrayIndex: a,
                 index: i,
-                word: targetArrays[a][i],
+                word: originalTargetArrays[a][i],
               };
-              console.log("Cut Match!");
               stopSession();
+            } else {
+              // Loop through the target words array
+              for (const word of targetWords) {
+                // If the ITN does not contain the target word, add it to the missing phrase
+                if (!ITN.includes(word)) {
+                  missingPhrase += word + " ";
+                }
+              }
+
+              // If there is a missing phrase, add it to the missing phrases array
+              if (missingPhrase.length > 0) {
+                missingPhrases.push(missingPhrase.trim());
+              }
             }
+          }
+
+          // Match out if there are not 5 missing phrases (meaning one ITN has no missing words)
+          if (missingPhrases.length != 5) {
+            match = {
+              arrayIndex: a,
+              index: i,
+              word: originalTargetArrays[a][i],
+            };
+            stopSession();
+          }
+
+          // Find the words common in all of the missing phrases
+          let set = {};
+          missingPhrases.forEach(function (a, i) {
+            let tokens = a.match(/\w+/g);
+            if (!i) {
+              tokens.forEach(function (t) {
+                set[t] = 1;
+              });
+            } else {
+              for (const k in set) {
+                if (tokens.indexOf(k) < 0) delete set[k];
+              }
+            }
+          });
+          const newTargetWords = Object.keys(set);
+
+          console.log("Common missing", newTargetWords);
+
+          // Update the phrase so that it is a string of only the words not yet found
+          targetArrays[a][i] = "";
+          for (const word of newTargetWords) {
+            targetArrays[a][i] += word + " ";
           }
         }
       }
     }
 
+    // Set timeout to stop recognition if there is no match
     if (!match) {
       timeoutID = setTimeout(() => {
         stopSession();

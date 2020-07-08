@@ -21,9 +21,7 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [
-    ["soy responsable quiero viajar", "soy responsables quiero viajar"],
-  ];
+  let targetArrays = [["です"]];
   const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
   const masterTimer = setTimeout(() => {
@@ -66,7 +64,6 @@ startButton.addEventListener("click", () => {
               index: i,
               word: e.result.text,
             };
-            console.log("Quick Match!");
           }
           stopSession();
         }
@@ -80,6 +77,13 @@ startButton.addEventListener("click", () => {
   // Called when one phrase is finished
   recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
+      // Set timeout to stop recognition if there is no match
+      timeoutID = setTimeout(() => {
+        stopSession();
+        output.innerText +=
+          "\nDone. Didn't recognize speech for " + waitingPeriod + "ms\n";
+      }, waitingPeriod);
+
       // Log each ITN
       for (const item of JSON.parse(e.result.privJson).NBest) {
         output.innerText += "Recognized ITN: " + item.ITN + "\n";
@@ -113,7 +117,6 @@ startButton.addEventListener("click", () => {
                 // If the ITN does not contain the target word, add it to the missing phrase
                 if (!ITN.includes(word)) {
                   missingPhrase += word + " ";
-                  console.log(ITN);
                 }
               }
 
@@ -124,8 +127,8 @@ startButton.addEventListener("click", () => {
             }
           }
 
-          // Match out if there are no missing phrases
-          if (missingPhrases.length == 0 || missingPhrases.length != 5) {
+          // Match out if there are not 5 missing phrases (meaning one ITN has no missing words)
+          if (missingPhrases.length != 5) {
             match = {
               arrayIndex: a,
               index: i,
@@ -137,7 +140,7 @@ startButton.addEventListener("click", () => {
           // Find the words common in all of the missing phrases
           let set = {};
           missingPhrases.forEach(function (a, i) {
-            var tokens = a.match(/\w+/g);
+            let tokens = a.match(/\w+/g);
             if (!i) {
               tokens.forEach(function (t) {
                 set[t] = 1;
@@ -150,7 +153,6 @@ startButton.addEventListener("click", () => {
           });
           const newTargetWords = Object.keys(set);
 
-          console.log("Missing phrases", missingPhrases);
           console.log("Common missing", newTargetWords);
 
           // Update the phrase so that it is a string of only the words not yet found
@@ -160,15 +162,6 @@ startButton.addEventListener("click", () => {
           }
         }
       }
-    }
-
-    // Set timeout to stop recognition if there is no match
-    if (!match) {
-      timeoutID = setTimeout(() => {
-        stopSession();
-        output.innerText +=
-          "\nDone. Didn't recognize speech for " + waitingPeriod + "ms\n";
-      }, waitingPeriod);
     }
   };
 
