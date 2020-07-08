@@ -98,6 +98,13 @@ You can get the target arrays from currentICObject in your code
   // Called when one phrase is finished
   recognizer.recognized = function (s, e) {
     if (e.result.text.length > 0) {
+       // Set timeout to stop recognition if there is no match
+      timeoutID = setTimeout(() => {
+        stopSession();
+        output.innerText +=
+          "\nDone. Didn't recognize speech for " + waitingPeriod + "ms\n";
+      }, waitingPeriod);
+
       // Loop through the array of target arrays
       for (a = 0; a < targetArrays.length; a++) {
         // Loop through the array of target phrases
@@ -173,17 +180,10 @@ You can get the target arrays from currentICObject in your code
       }
     }
 
-    // Set timeout to stop recognition if there is no match
-    if (!match) {
-      timeoutID = setTimeout(() => {
-        stopSession();
-      }, waitingPeriod);
-    }
-  };
-
   // To be called to stop the session
   function stopSession() {
     clearTimeout(masterTimer);
+    clearTimeout(timeoutID);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
   }

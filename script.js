@@ -21,7 +21,7 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [["です"]];
+  let targetArrays = [["je suis capable je suis artiste"]];
   const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
   const masterTimer = setTimeout(() => {
@@ -168,6 +168,7 @@ startButton.addEventListener("click", () => {
   // To be called to stop the session
   function stopSession() {
     clearTimeout(masterTimer);
+    clearTimeout(timeoutID);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
     // webAudioRecorder.finishRecording();
