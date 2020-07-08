@@ -21,7 +21,7 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [["je suis capable je suis artiste"]];
+  let targetArrays = [["quiero hablar español quiero aprender español"]];
   const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
   const masterTimer = setTimeout(() => {
@@ -147,7 +147,7 @@ startButton.addEventListener("click", () => {
           // Find the words common in all of the missing phrases
           let set = {};
           missingPhrases.forEach(function (a, i) {
-            let tokens = a.match(/\w+/g);
+            let tokens = a.match(/[^\s\-.,!?]+/g);
             if (!i) {
               tokens.forEach(function (t) {
                 set[t] = 1;
