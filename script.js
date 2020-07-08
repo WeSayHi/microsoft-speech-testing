@@ -2,9 +2,9 @@
 const startButton = document.getElementById("start-button");
 const output = document.getElementById("output-text");
 const waitingPeriodInput = document.getElementById("waiting-period-input");
-const waitingPeriod = waitingPeriodInput.value;
+let waitingPeriod = waitingPeriodInput.value;
 const dropdown = document.getElementById("language-dropdown");
-const languageCode = dropdown[dropdown.selectedIndex].value;
+let languageCode = dropdown[dropdown.selectedIndex].value;
 const audioElement = document.getElementById("audio");
 let webAudioRecorder;
 
@@ -21,7 +21,9 @@ dropdown.addEventListener("change", function () {
 // Called when the start button is clicked
 startButton.addEventListener("click", () => {
   // Initialize variables local to each recognition session
-  let targetArrays = [["je suis capable"], ["je suis artiste je suis libre"]];
+  let targetArrays = [
+    ["soy responsable quiero viajar", "soy responsables quiero viajar"],
+  ];
   const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
   const masterTimer = setTimeout(() => {
@@ -123,7 +125,7 @@ startButton.addEventListener("click", () => {
           }
 
           // Match out if there are no missing phrases
-          if (missingPhrases.length == 0) {
+          if (missingPhrases.length == 0 || missingPhrases.length != 5) {
             match = {
               arrayIndex: a,
               index: i,
@@ -175,7 +177,7 @@ startButton.addEventListener("click", () => {
     clearTimeout(masterTimer);
     recognizer.stopContinuousRecognitionAsync();
     recognizer.close();
-    webAudioRecorder.finishRecording();
+    // webAudioRecorder.finishRecording();
     startButton.disabled = false;
     // phraseListGrammar.clear();
     if (match) {
@@ -198,92 +200,93 @@ startButton.addEventListener("click", () => {
   startButton.disabled = true;
   audioElement.controls = false;
 
-  // Record the sound on a sepereate stream ndoe
-  navigator.mediaDevices
-    .getUserMedia({ audio: true, video: false })
-    .then((stream) => {
-      getUserMediaStream = stream;
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
+  //   // Record the sound on a sepereate stream ndoe
+  //   navigator.mediaDevices
+  //     .getUserMedia({ audio: true, video: false })
+  //     .then((stream) => {
+  //       getUserMediaStream = stream;
+  //       const AudioContext = window.AudioContext || window.webkitAudioContext;
+  //       const audioContext = new AudioContext();
+  //       const source = audioContext.createMediaStreamSource(stream);
 
-      webAudioRecorder = new WebAudioRecorder(source, {
-        workerDir: "web_audio_recorder_js/",
-        numChannels: 1,
-        encoding: "ogg",
-        options: {
-          timeLimit: 60,
-          encodeAfterRecord: true,
-          ogg: { quality: 0.5 },
-        },
-      });
+  //       webAudioRecorder = new WebAudioRecorder(source, {
+  //         workerDir: "web_audio_recorder_js/",
+  //         numChannels: 1,
+  //         encoding: "ogg",
+  //         options: {
+  //           timeLimit: 60,
+  //           encodeAfterRecord: true,
+  //           ogg: { quality: 0.5 },
+  //         },
+  //       });
 
-      // Called when the recording has finished
-      webAudioRecorder.onComplete = (webAudioRecorder, blob) => {
-        // Prepare and upload the file to AWS S3
-        blob.name = uuid() + ".ogg";
-        // s3upload(blob);
+  //       // Called when the recording has finished
+  //       webAudioRecorder.onComplete = (webAudioRecorder, blob) => {
+  //         // Prepare and upload the file to AWS S3
+  //         blob.name = uuid() + ".ogg";
+  //         // s3upload(blob);
 
-        const audioElementSource = window.URL.createObjectURL(blob);
-        audioElement.src = audioElementSource;
-        audioElement.controls = true;
-      };
+  //         const audioElementSource = window.URL.createObjectURL(blob);
+  //         audioElement.src = audioElementSource;
+  //         audioElement.controls = true;
+  //       };
 
-      webAudioRecorder.onError = (webAudioRecorder, err) => {
-        console.error(err);
-      };
+  //       webAudioRecorder.onError = (webAudioRecorder, err) => {
+  //         console.error(err);
+  //       };
 
-      webAudioRecorder.startRecording();
-    })
-    .catch((err) => {
-      console.error(err);
-    });
+  //       webAudioRecorder.startRecording();
+  //     })
+  //     .catch((err) => {
+  //       console.error(err);
+  //     });
+  // });
+
+  // // Generate UUID
+  // function uuid() {
+  //   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+  //     let r = (Math.random() * 16) | 0,
+  //       v = c == "x" ? r : (r & 0x3) | 0x8;
+  //     return v.toString(16);
+  //   });
+  // }
+
+  // // Initialize AWS configuration
+  // let bucketName = "nfscratch";
+  // let bucketRegion = "us-east-1";
+  // let IdentityPoolId = "us-east-1:3efbe2a5-c38f-433a-8720-37b7b5f61a7d";
+
+  // AWS.config.update({
+  //   region: bucketRegion,
+  //   credentials: new AWS.CognitoIdentityCredentials({
+  //     IdentityPoolId: IdentityPoolId,
+  //   }),
+  // });
+
+  // const s3 = new AWS.S3({
+  //   apiVersion: "2006-03-01",
+  //   params: { Bucket: bucketName },
+  // });
+
+  // // Upload to S3
+  // function s3upload(file) {
+  //   if (file) {
+  //     const fileName = file.name;
+  //     const filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
+
+  //     s3.upload(
+  //       {
+  //         Key: filePath,
+  //         Body: file,
+  //         ACL: "public-read",
+  //       },
+  //       function (err, data) {
+  //         if (err) {
+  //           reject("error");
+  //         }
+  //         console.log("Successfully Uploaded!");
+  //       }
+  //     );
+  //   }
+  // }
 });
-
-// Generate UUID
-function uuid() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    let r = (Math.random() * 16) | 0,
-      v = c == "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-// Initialize AWS configuration
-let bucketName = "nfscratch";
-let bucketRegion = "us-east-1";
-let IdentityPoolId = "us-east-1:3efbe2a5-c38f-433a-8720-37b7b5f61a7d";
-
-AWS.config.update({
-  region: bucketRegion,
-  credentials: new AWS.CognitoIdentityCredentials({
-    IdentityPoolId: IdentityPoolId,
-  }),
-});
-
-const s3 = new AWS.S3({
-  apiVersion: "2006-03-01",
-  params: { Bucket: bucketName },
-});
-
-// Upload to S3
-function s3upload(file) {
-  if (file) {
-    const fileName = file.name;
-    const filePath = "LukesStrikeZoneforaudiosaving/" + fileName;
-
-    s3.upload(
-      {
-        Key: filePath,
-        Body: file,
-        ACL: "public-read",
-      },
-      function (err, data) {
-        if (err) {
-          reject("error");
-        }
-        console.log("Successfully Uploaded!");
-      }
-    );
-  }
-}
