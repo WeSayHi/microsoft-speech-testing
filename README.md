@@ -6,25 +6,7 @@ To test out the improved STT, run index.js (you can run with Live Server in VSCo
 
 ### Install Dependencies:
 
-First, install web-audio-recorder-js with...
-
-```
-npm install web-audio-recorder-js
-```
-
-and reference in the code with...
-
-```
-const SpeechSDK = require("web-audio-recorder-js")
-```
-
-or...
-
-```
-import SpeechSDK from "web-audio-recorder-js"
-```
-
-Next, install the speech SDK with...
+Install the speech SDK with...
 
 ```
 npm install microsoft-cognitiveservices-speech-sdk
@@ -51,13 +33,16 @@ You can get the target arrays from currentICObject in your code
 ```
   // Initialize variables local to each recognition session
   let targetArrays = [
-    ["soy responsable quiero viajar", "soy responsables quiero viajar"],
+    ["je suis capable", "je sui capables"],
+    ["je suis artiste", "je sui artiste"]
   ];
   const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
   const masterTimer = setTimeout(() => {
     stopSession();
   }, 120000);
+  let languageCode = "fr-FR"
+  let waitingPeriod = 2000
 
   // Set up the SpeechSDK config
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
