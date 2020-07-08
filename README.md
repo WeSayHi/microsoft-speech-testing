@@ -33,13 +33,16 @@ You can get the target arrays from currentICObject in your code
 ```
   // Initialize variables local to each recognition session
   let targetArrays = [
-    ["soy responsable quiero viajar", "soy responsables quiero viajar"],
+    ["je suis capable", "je sui capables"],
+    ["je suis artiste", "je sui artiste"]
   ];
   const originalTargetArrays = JSON.parse(JSON.stringify(targetArrays));
   let match = null;
   const masterTimer = setTimeout(() => {
     stopSession();
   }, 120000);
+  let languageCode = "fr-FR"
+  let waitingPeriod = 2000
 
   // Set up the SpeechSDK config
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
