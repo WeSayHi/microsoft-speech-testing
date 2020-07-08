@@ -128,13 +128,21 @@ You can get the target arrays from currentICObject in your code
               };
               stopSession();
             } else {
-              // Loop through the target words array
-              for (const word of targetWords) {
-                // If the ITN does not contain the target word, add it to the missing phrase
-                if (!ITN.includes(word)) {
-                  missingPhrase += word + " ";
+               // Find the difference between the target words and ITN words (including duplicates)
+              const ITNWords = ITN.toLowerCase().split(" ");
+              const difference = JSON.parse(JSON.stringify(targetWords));
+              for (const word of JSON.parse(JSON.stringify(ITNWords))) {
+                if (difference.includes(word)) {
+                  difference.splice(difference.indexOf(word), 1);
+                  ITNWords.splice(ITNWords.indexOf(word), 1);
                 }
               }
+
+              // Add each word of difference to the missing phrase
+              for (const word of difference) {
+                missingPhrase += word + " ";
+              }
+
 
               // If there is a missing phrase, add it to the missing phrases array
               if (missingPhrase.length > 0) {
